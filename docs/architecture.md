@@ -270,3 +270,8 @@ sequenceDiagram
   - Static UI components: Server Components (navigation bars, footers, headers)
   - Interactive components: Client Components (search inputs, forms, modals)
 - **State Management Location**: Keep state in the lowest component that needs it. If only SearchInput needs suggestions state, don't lift it to the page level.
+- **YAGNI (You Aren't Gonna Need It)**: 
+  - Remove unused imports, variables, and functions immediately
+  - Delete dead code and commented-out blocks
+  - Don't add features or dependencies "just in case" 
+  - Every import and dependency must serve an immediate purpose
