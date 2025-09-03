@@ -169,10 +169,14 @@ describe('PriceChartContainer', () => {
     });
 
     it('should change active period when button is clicked', () => {
+      const mockOnPeriodChange = vi.fn();
+      
       render(
         <PriceChartContainer
           symbol="AAPL"
           historicalData={mockHistoricalData}
+          period="1M"
+          onPeriodChange={mockOnPeriodChange}
         />
       );
 
@@ -184,8 +188,7 @@ describe('PriceChartContainer', () => {
 
       fireEvent.click(button1D);
 
-      expect(button1D).toHaveClass('btn-active');
-      expect(button1M).not.toHaveClass('btn-active');
+      expect(mockOnPeriodChange).toHaveBeenCalledWith('1D');
     });
 
     it('should render chart info badges', () => {
@@ -214,37 +217,52 @@ describe('PriceChartContainer', () => {
     });
   });
 
-  describe('Data Filtering by Period', () => {
-    it('should filter data correctly for 1D period', async () => {
+  describe('Period Display and Interaction', () => {
+    it('should display correct data count for provided data', () => {
       render(
         <PriceChartContainer
           symbol="AAPL"
           historicalData={mockHistoricalData}
+          period="1M"
         />
       );
 
-      const button1D = screen.getByText('1D');
-      fireEvent.click(button1D);
-
-      await waitFor(() => {
-        expect(screen.getByText('1 data points')).toBeInTheDocument();
-      });
+      // Should show the actual data count provided (5 data points from mockHistoricalData)
+      expect(screen.getByText('5 data points')).toBeInTheDocument();
     });
 
-    it('should filter data correctly for 5D period', async () => {
+    it('should highlight the correct period button', () => {
       render(
         <PriceChartContainer
           symbol="AAPL"
           historicalData={mockHistoricalData}
+          period="1Y"
+        />
+      );
+
+      const button1Y = screen.getByText('1Y');
+      const button1M = screen.getByText('1M');
+
+      expect(button1Y).toHaveClass('btn-active');
+      expect(button1M).not.toHaveClass('btn-active');
+    });
+
+    it('should call onPeriodChange when period button is clicked', () => {
+      const mockOnPeriodChange = vi.fn();
+      
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+          period="1M"
+          onPeriodChange={mockOnPeriodChange}
         />
       );
 
       const button5D = screen.getByText('5D');
       fireEvent.click(button5D);
 
-      await waitFor(() => {
-        expect(screen.getByText('5 data points')).toBeInTheDocument();
-      });
+      expect(mockOnPeriodChange).toHaveBeenCalledWith('5D');
     });
   });
 

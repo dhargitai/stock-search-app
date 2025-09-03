@@ -2,12 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, type RouterOutputs } from '@/lib/api';
+import type { SearchSuggestion } from '@/lib/types/stock';
 
-interface SearchSuggestion {
-  symbol: string;
-  name: string;
-}
+type SearchSuggestions = RouterOutputs['stock']['search'];
 
 interface SearchInputProps {
   placeholder?: string;
@@ -47,7 +45,7 @@ export function SearchInput({
 
   // Use tRPC query for fetching suggestions
   const {
-    data: suggestions = [],
+    data,
     isLoading,
     isError,
     error,
@@ -58,6 +56,9 @@ export function SearchInput({
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     }
   );
+
+  // Ensure suggestions is properly typed as an array
+  const suggestions: SearchSuggestions = data || [];
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const value = event.target.value;

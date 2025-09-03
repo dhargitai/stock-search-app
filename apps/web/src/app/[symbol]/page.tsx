@@ -1,18 +1,28 @@
 import { Navbar } from '@/components/ui/navbar';
 import { StockQuoteCard } from '@/components/ui/stock-quote-card';
-import { PriceChartContainer } from '@/components/ui/price-chart-container';
+import { PriceChartWrapper } from '@/components/ui/price-chart-wrapper';
 import { serverApi } from '@/lib/trpc-server';
 import { TRPCError } from '@trpc/server';
 import type { StockDetailsData } from '@/lib/types/stock';
+
+type ChartPeriod = '1D' | '5D' | '1M' | '1Y';
+
+// Route segment config for caching
+export const revalidate = 60; // ISR - revalidate every 60 seconds
+export const fetchCache = 'default-cache'; // Allow fetch caching
 
 interface StockDetailPageProps {
   params: Promise<{
     symbol: string;
   }>;
+  searchParams: Promise<{
+    period?: string;
+  }>;
 }
 
-export default async function StockDetailPage({ params }: StockDetailPageProps): Promise<JSX.Element> {
+export default async function StockDetailPage({ params, searchParams }: StockDetailPageProps): Promise<JSX.Element> {
   const { symbol } = await params;
+  const { period = '1M' } = await searchParams;
   const decodedSymbol = decodeURIComponent(symbol);
 
   // Fetch real stock data using SSR with tRPC
@@ -21,7 +31,10 @@ export default async function StockDetailPage({ params }: StockDetailPageProps):
   const isLoading = false; // SSR means data is always loaded by the time we render
 
   try {
-    stockData = await serverApi.stock.getDetails({ symbol: decodedSymbol });
+    stockData = await serverApi.stock.getDetails({ 
+      symbol: decodedSymbol, 
+      period: period as ChartPeriod 
+    });
   } catch (err) {
     if (err instanceof TRPCError) {
       error = err.message;
@@ -69,9 +82,10 @@ export default async function StockDetailPage({ params }: StockDetailPageProps):
 
             {/* Price Chart Container */}
             <div>
-              <PriceChartContainer 
+              <PriceChartWrapper 
                 symbol={stockData?.symbol || decodedSymbol.toUpperCase()}
                 historicalData={stockData?.historicalData}
+                initialPeriod={period as ChartPeriod}
                 isLoading={isLoading}
                 error={error}
               />

@@ -24,7 +24,11 @@ export function TRPCProvider({
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000, // 1 minute
+        staleTime: 5 * 60 * 1000, // 5 minutes - matches server cache
+        gcTime: 10 * 60 * 1000, // 10 minutes - keep in memory longer
+        refetchOnWindowFocus: false, // Don't refetch on window focus for stock data
+        refetchOnReconnect: true, // But refetch on reconnect
+        retry: 3, // Retry failed requests
       },
     },
   }));

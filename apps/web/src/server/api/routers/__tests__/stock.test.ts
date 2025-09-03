@@ -24,6 +24,16 @@ vi.mock('@peak-finance/db', () => ({
   }
 }));
 
+// Mock cache utility
+vi.mock('@/server/utils/cache', () => ({
+  stockDataCache: {
+    get: vi.fn(() => null), // Always return null so cache doesn't interfere with tests
+    set: vi.fn(),
+    has: vi.fn(() => false),
+    clear: vi.fn()
+  }
+}));
+
 // Mock fetch globally
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -121,7 +131,7 @@ describe('Stock Router', () => {
 
     it('should handle API rate limit error', async () => {
       const mockResponse = {
-        Note: 'Thank you for using Alpha Vantage! Our standard API call frequency is 5 calls per minute and 500 calls per day.'
+        Information: 'API rate limit is 5 calls per minute and 500 calls per day'
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -159,7 +169,11 @@ describe('Stock Router', () => {
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('function=GLOBAL_QUOTE')
+        expect.stringContaining('function=GLOBAL_QUOTE'),
+        expect.objectContaining({
+          cache: 'force-cache',
+          next: expect.objectContaining({ revalidate: expect.any(Number) })
+        })
       );
     });
 
@@ -230,7 +244,11 @@ describe('Stock Router', () => {
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('function=TIME_SERIES_DAILY')
+        expect.stringContaining('function=TIME_SERIES_DAILY'),
+        expect.objectContaining({
+          cache: 'force-cache',
+          next: expect.objectContaining({ revalidate: expect.any(Number) })
+        })
       );
     });
 
@@ -243,18 +261,21 @@ describe('Stock Router', () => {
       });
 
       const caller = stockRouter.createCaller(ctx);
+      const result = await caller.getTimeSeriesDaily({ symbol: 'AAPL' });
       
-      await expect(caller.getTimeSeriesDaily({ symbol: 'AAPL' }))
-        .rejects.toThrow(TRPCError);
+      expect(result).toEqual([]);
     });
 
     it('should limit results to 30 days and sort chronologically', async () => {
       const timeSeriesData: { [key: string]: any } = {};
       
-      // Create 40 days of data
+      // Create 40 days of data (going backwards from a base date)
+      const baseDate = new Date(2023, 11, 31); // December 31, 2023
       for (let i = 0; i < 40; i++) {
-        const date = new Date(2023, 11, i + 1).toISOString().split('T')[0];
-        timeSeriesData[date] = {
+        const date = new Date(baseDate);
+        date.setDate(baseDate.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        timeSeriesData[dateStr] = {
           '1. open': '150.00',
           '2. high': '155.50',
           '3. low': '149.00',

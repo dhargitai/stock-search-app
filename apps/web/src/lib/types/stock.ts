@@ -44,6 +44,22 @@ export interface AlphaVantageTimeSeriesResponse {
   'Information'?: string; // For premium endpoint errors
 }
 
+// Alphavantage TIME_SERIES_INTRADAY API Response
+export interface AlphaVantageIntradayResponse {
+  'Meta Data': {
+    '1. Information': string;
+    '2. Symbol': string;
+    '3. Last Refreshed': string;
+    '4. Interval': string;
+    '5. Output Size': string;
+    '6. Time Zone': string;
+  };
+  [key: string]: any; // The time series key varies by interval (e.g., "Time Series (15min)")
+  'Error Message'?: string;
+  'Note'?: string;
+  'Information'?: string;
+}
+
 // Processed stock quote data for components
 export interface StockQuoteData {
   price: number;
@@ -81,4 +97,10 @@ export interface StockInfo {
   symbol: string;
   companyName: string;
   lastUpdated: string;
+}
+
+// Search suggestion for autocomplete
+export interface SearchSuggestion {
+  symbol: string;
+  name: string;
 }

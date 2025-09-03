@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { ChartDataPoint } from '@/lib/types/stock';
 
+type ChartPeriod = '1D' | '5D' | '1M' | '1Y';
+
 // Utility to get theme colors with proper fallbacks
 function getThemeColors() {
   if (typeof window === 'undefined') {
@@ -45,6 +47,8 @@ interface PriceChartContainerProps {
   isLoading?: boolean;
   error?: string;
   className?: string;
+  period?: ChartPeriod;
+  onPeriodChange?: (period: ChartPeriod) => void;
 }
 
 function ChartLoadingSkeleton(): JSX.Element {
@@ -79,8 +83,17 @@ function ChartErrorDisplay({ error }: { error: string }): JSX.Element {
   );
 }
 
-function PriceChart({ symbol, data }: { symbol: string; data: ChartDataPoint[] }): JSX.Element {
-  const [selectedPeriod, setSelectedPeriod] = useState('1M');
+function PriceChart({ 
+  symbol, 
+  data, 
+  period = '1M', 
+  onPeriodChange 
+}: { 
+  symbol: string; 
+  data: ChartDataPoint[];
+  period?: ChartPeriod;
+  onPeriodChange?: (period: ChartPeriod) => void;
+}): JSX.Element {
   const chartRef = useRef<any>(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -93,32 +106,18 @@ function PriceChart({ symbol, data }: { symbol: string; data: ChartDataPoint[] }
 
     try {
       // Filter data based on selected period
-      let filteredData = data.filter(item => 
+      // Data is already filtered by the API based on period
+      const validData = data.filter(item => 
         item && 
         typeof item.date === 'string' && 
         typeof item.close === 'number' && 
         !isNaN(item.close)
       );
-      
-      switch (selectedPeriod) {
-        case '1D':
-          filteredData = filteredData.slice(-1);
-          break;
-        case '5D':
-          filteredData = filteredData.slice(-5);
-          break;
-        case '1M':
-          filteredData = filteredData.slice(-20);
-          break;
-        case '1Y':
-          filteredData = filteredData; // Show all available data
-          break;
-      }
 
-      if (filteredData.length === 0) return null;
+      if (validData.length === 0) return null;
 
-      const dates = filteredData.map(item => item.date);
-      const prices = filteredData.map(item => item.close);
+      const dates = validData.map(item => item.date);
+      const prices = validData.map(item => item.close);
 
       // Validate that we have valid price data
       const validPrices = prices.filter(price => typeof price === 'number' && !isNaN(price));
@@ -134,7 +133,7 @@ function PriceChart({ symbol, data }: { symbol: string; data: ChartDataPoint[] }
       console.error('Error transforming chart data:', error);
       return null;
     }
-  }, [data, selectedPeriod]);
+  }, [data]);
 
   const chartOption = useMemo(() => {
     if (!chartData || !chartData.dates.length || !chartData.prices.length) return null;
@@ -158,12 +157,52 @@ function PriceChart({ symbol, data }: { symbol: string; data: ChartDataPoint[] }
           },
           axisLabel: {
             color: colors.textMuted,
-            formatter: function(value: string) {
+            formatter: function(value: string, index: number) {
               try {
-                return new Date(value).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric'
-                });
+                const date = new Date(value);
+                
+                // For 1D period, show time format
+                if (period === '1D') {
+                  // Get the current date string for comparison
+                  const currentDateString = date.toDateString();
+                  
+                  // Check if this is the first occurrence of this date
+                  let isFirstOccurrence = false;
+                  if (chartData && chartData.dates && index !== undefined) {
+                    const previousIndex = index - 1;
+                    if (previousIndex < 0) {
+                      isFirstOccurrence = true;
+                    } else {
+                      const previousDate = new Date(chartData.dates[previousIndex]);
+                      isFirstOccurrence = previousDate.toDateString() !== currentDateString;
+                    }
+                  }
+                  
+                  // For first occurrence of the date, show "Sep 2, 13:15"
+                  if (isFirstOccurrence) {
+                    return date.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric'
+                    }) + ', ' + date.toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    });
+                  } else {
+                    // For subsequent times, show only "13:15"
+                    return date.toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    });
+                  }
+                } else {
+                  // For other periods, show date only
+                  return date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                  });
+                }
               } catch {
                 return value;
               }
@@ -233,14 +272,32 @@ function PriceChart({ symbol, data }: { symbol: string; data: ChartDataPoint[] }
               const dataPoint = params[0];
               if (!dataPoint || dataPoint.name === undefined || dataPoint.value === undefined) return '';
               
-              const date = new Date(dataPoint.name).toLocaleDateString('en-US', {
-                weekday: 'short',
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-              });
+              const date = new Date(dataPoint.name);
+              let dateDisplay: string;
+              
+              // For 1D period, show full datetime
+              if (period === '1D') {
+                dateDisplay = date.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric'
+                }) + ' at ' + date.toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                });
+              } else {
+                // For other periods, show date only
+                dateDisplay = date.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                });
+              }
+              
               const price = typeof dataPoint.value === 'number' ? dataPoint.value.toFixed(2) : '0.00';
-              return `${date}<br/>Price: $${price}`;
+              return `${dateDisplay}<br/>Price: $${price}`;
             } catch (error) {
               console.error('Tooltip formatter error:', error);
               return 'Data unavailable';
@@ -255,14 +312,16 @@ function PriceChart({ symbol, data }: { symbol: string; data: ChartDataPoint[] }
       console.error('Error creating chart options:', error);
       return null;
     }
-  }, [chartData, colors, isAnimating]);
+  }, [chartData, colors, isAnimating, period]);
 
   // Handle period changes with animation control
-  const handlePeriodChange = (period: string) => {
-    if (period === selectedPeriod) return;
+  const handlePeriodChange = (newPeriod: ChartPeriod) => {
+    if (newPeriod === period) return;
     
     setIsAnimating(true);
-    setSelectedPeriod(period);
+    if (onPeriodChange) {
+      onPeriodChange(newPeriod);
+    }
     
     // Reset animation flag after update
     setTimeout(() => {
@@ -309,25 +368,25 @@ function PriceChart({ symbol, data }: { symbol: string; data: ChartDataPoint[] }
         <div className="flex gap-2">
           <div className="btn-group">
             <button 
-              className={`btn btn-sm ${selectedPeriod === '1D' ? 'btn-active' : ''}`}
+              className={`btn btn-sm ${period === '1D' ? 'btn-active' : ''}`}
               onClick={() => handlePeriodChange('1D')}
             >
               1D
             </button>
             <button 
-              className={`btn btn-sm ${selectedPeriod === '5D' ? 'btn-active' : ''}`}
+              className={`btn btn-sm ${period === '5D' ? 'btn-active' : ''}`}
               onClick={() => handlePeriodChange('5D')}
             >
               5D
             </button>
             <button 
-              className={`btn btn-sm ${selectedPeriod === '1M' ? 'btn-active' : ''}`}
+              className={`btn btn-sm ${period === '1M' ? 'btn-active' : ''}`}
               onClick={() => handlePeriodChange('1M')}
             >
               1M
             </button>
             <button 
-              className={`btn btn-sm ${selectedPeriod === '1Y' ? 'btn-active' : ''}`}
+              className={`btn btn-sm ${period === '1Y' ? 'btn-active' : ''}`}
               onClick={() => handlePeriodChange('1Y')}
             >
               1Y
@@ -371,7 +430,9 @@ export function PriceChartContainer({
   historicalData,
   isLoading, 
   error, 
-  className = "" 
+  className = "",
+  period = '1M',
+  onPeriodChange
 }: PriceChartContainerProps): JSX.Element {
   if (error) {
     return (
@@ -423,7 +484,12 @@ export function PriceChartContainer({
 
   return (
     <div className={className}>
-      <PriceChart symbol={symbol} data={historicalData} />
+      <PriceChart 
+        symbol={symbol} 
+        data={historicalData} 
+        period={period}
+        onPeriodChange={onPeriodChange}
+      />
     </div>
   );
 }
