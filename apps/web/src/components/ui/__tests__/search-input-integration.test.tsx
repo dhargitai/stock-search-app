@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SearchInput } from '../search-input';
 
@@ -155,10 +155,12 @@ describe('SearchInput with tRPC Integration', () => {
     );
     
     const input = screen.getByRole('combobox');
-    fireEvent.change(input, { target: { value: 'NONEXISTENT' } });
     
-    // Wait for debounce
-    await new Promise(resolve => setTimeout(resolve, 350));
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'NONEXISTENT' } });
+      // Wait for debounce
+      await new Promise(resolve => setTimeout(resolve, 350));
+    });
     
     await waitFor(() => {
       expect(screen.getByText('No matching stocks found.')).toBeInTheDocument();
@@ -210,14 +212,16 @@ describe('SearchInput with tRPC Integration', () => {
     
     const input = screen.getByRole('combobox');
     
-    // Type quickly
-    fireEvent.change(input, { target: { value: 'A' } });
-    fireEvent.change(input, { target: { value: 'AA' } });
-    fireEvent.change(input, { target: { value: 'AAP' } });
-    fireEvent.change(input, { target: { value: 'AAPL' } });
-    
-    // Wait for debounce
-    await new Promise(resolve => setTimeout(resolve, 350));
+    await act(async () => {
+      // Type quickly
+      fireEvent.change(input, { target: { value: 'A' } });
+      fireEvent.change(input, { target: { value: 'AA' } });
+      fireEvent.change(input, { target: { value: 'AAP' } });
+      fireEvent.change(input, { target: { value: 'AAPL' } });
+      
+      // Wait for debounce
+      await new Promise(resolve => setTimeout(resolve, 350));
+    });
     
     // Should only be called once with the final query after debounce
     expect(mockUseQuery).toHaveBeenCalledWith(

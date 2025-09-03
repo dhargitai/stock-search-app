@@ -1,4 +1,6 @@
 import { Navbar } from '@/components/ui/navbar';
+import { StockQuoteCard } from '@/components/ui/stock-quote-card';
+import { PriceChartContainer } from '@/components/ui/price-chart-container';
 
 // TODO: Future integration with tRPC for fetching real stock data
 // import { api } from '@/lib/api';
@@ -9,57 +11,90 @@ interface StockDetailPageProps {
   }>;
 }
 
+interface StockInfo {
+  symbol: string;
+  companyName: string;
+  lastUpdated: string;
+}
+
+interface StockQuoteData {
+  price: number;
+  change: number;
+  percentChange: number;
+  open: number;
+  high: number;
+  low: number;
+  volume: number;
+  prevClose: number;
+}
+
 export default async function StockDetailPage({ params }: StockDetailPageProps): Promise<JSX.Element> {
   const { symbol } = await params;
   const decodedSymbol = decodeURIComponent(symbol);
+
+  // TODO: Replace with real data from tRPC in future stories
+  const mockStockInfo: StockInfo = {
+    symbol: decodedSymbol.toUpperCase(),
+    companyName: `${decodedSymbol.toUpperCase()} Company`,
+    lastUpdated: new Date().toISOString(),
+  };
+
+  const mockStockQuoteData: StockQuoteData = {
+    price: 150.25,
+    change: 2.34,
+    percentChange: 1.58,
+    open: 148.50,
+    high: 152.75,
+    low: 147.80,
+    volume: 1234567,
+    prevClose: 147.91,
+  };
+
+  // Simulate loading state - in real implementation this would come from tRPC loading state
+  const isLoading = false;
+  const error = undefined; // Could be set to simulate error: "Failed to fetch stock data"
 
   return (
     <div className="min-h-screen bg-base-100">
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
+          {/* Header Section */}
           <div className="mb-8">
-            <h1 className="text-3xl lg:text-4xl font-bold text-base-content mb-2">
-              Stock Details: {decodedSymbol.toUpperCase()}
-            </h1>
-            <p className="text-base-content/70">
-              Detailed information for {decodedSymbol.toUpperCase()}
-            </p>
-          </div>
-
-          <div className="grid gap-6">
-            {/* Stock Info Card */}
-            <div className="card bg-base-200 shadow-lg">
-              <div className="card-body">
-                <h2 className="card-title text-xl mb-4">Stock Information</h2>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="stat">
-                    <div className="stat-title">Symbol</div>
-                    <div className="stat-value text-primary">{decodedSymbol.toUpperCase()}</div>
-                  </div>
-                  
-                  <div className="stat">
-                    <div className="stat-title">Status</div>
-                    <div className="stat-value text-sm">
-                      <div className="badge badge-info">Coming Soon</div>
-                    </div>
-                  </div>
-                </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-4xl lg:text-5xl font-bold text-base-content mb-2">
+                  {mockStockInfo.symbol}
+                </h1>
+                <p className="text-xl text-base-content/70">
+                  {mockStockInfo.companyName}
+                </p>
+              </div>
+              <div className="badge badge-outline badge-lg">
+                Last Updated: {new Date(mockStockInfo.lastUpdated).toLocaleTimeString()}
               </div>
             </div>
+          </div>
 
-            {/* Placeholder for future data */}
-            <div className="card bg-base-200 shadow-lg">
-              <div className="card-body">
-                <h2 className="card-title text-xl mb-4">Real-time Data</h2>
-                <div className="text-center py-12">
-                  <div className="loading loading-spinner loading-lg mb-4"></div>
-                  <p className="text-base-content/70">
-                    Real-time stock data integration will be implemented in future stories.
-                  </p>
-                </div>
-              </div>
+          {/* Main Content Grid */}
+          <div className="grid gap-6 lg:gap-8">
+            {/* Stock Quote Data Section */}
+            <div>
+              <StockQuoteCard 
+                data={mockStockQuoteData}
+                isLoading={isLoading}
+                error={error}
+              />
+            </div>
+
+            {/* Price Chart Container */}
+            <div>
+              <PriceChartContainer 
+                symbol={mockStockInfo.symbol}
+                isLoading={isLoading}
+                error={error}
+              />
             </div>
           </div>
         </div>
