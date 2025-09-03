@@ -10,6 +10,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
     css: true,
+    pool: 'forks',
+    teardownTimeout: 10000,
   },
   resolve: {
     alias: {
