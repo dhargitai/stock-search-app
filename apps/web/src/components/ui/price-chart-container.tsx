@@ -1,5 +1,8 @@
+import type { ChartDataPoint } from '@/lib/types/stock';
+
 interface PriceChartContainerProps {
   symbol: string;
+  historicalData?: ChartDataPoint[];
   isLoading?: boolean;
   error?: string;
   className?: string;
@@ -37,7 +40,7 @@ function ChartErrorDisplay({ error }: { error: string }): JSX.Element {
   );
 }
 
-function ChartPlaceholder({ symbol }: { symbol: string }): JSX.Element {
+function ChartPlaceholder({ symbol, hasData = false }: { symbol: string; hasData?: boolean }): JSX.Element {
   return (
     <div className="w-full">
       {/* Chart Header */}
@@ -84,14 +87,26 @@ function ChartPlaceholder({ symbol }: { symbol: string }): JSX.Element {
             <div className="text-center space-y-4 z-10">
               <div className="text-6xl">📈</div>
               <div>
-                <h4 className="text-lg font-semibold mb-2">Interactive Chart Coming Soon</h4>
+                <h4 className="text-lg font-semibold mb-2">
+                  {hasData ? 'Chart Data Available' : 'Interactive Chart Coming Soon'}
+                </h4>
                 <p className="text-base-content/70 text-sm max-w-md mx-auto">
-                  This container is prepared for Apache ECharts integration to display interactive price charts with multiple timeframes and technical indicators.
+                  {hasData 
+                    ? `Historical price data for ${symbol} has been loaded and is ready for Apache ECharts integration.`
+                    : 'This container is prepared for Apache ECharts integration to display interactive price charts with multiple timeframes and technical indicators.'
+                  }
                 </p>
               </div>
-              <div className="badge badge-info badge-lg">
-                Apache ECharts Ready
+              <div className={`badge badge-lg ${
+                hasData ? 'badge-success' : 'badge-info'
+              }`}>
+                {hasData ? 'Data Loaded' : 'Apache ECharts Ready'}
               </div>
+              {hasData && (
+                <div className="text-xs text-base-content/50 mt-2">
+                  Ready for line chart integration
+                </div>
+              )}
             </div>
           </div>
 
@@ -114,6 +129,7 @@ function ChartPlaceholder({ symbol }: { symbol: string }): JSX.Element {
 
 export function PriceChartContainer({ 
   symbol, 
+  historicalData,
   isLoading, 
   error, 
   className = "" 
@@ -134,9 +150,11 @@ export function PriceChartContainer({
     );
   }
 
+  const hasData = historicalData && historicalData.length > 0;
+
   return (
     <div className={className}>
-      <ChartPlaceholder symbol={symbol} />
+      <ChartPlaceholder symbol={symbol} hasData={hasData} />
     </div>
   );
 }

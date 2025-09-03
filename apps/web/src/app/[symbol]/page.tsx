@@ -1,9 +1,9 @@
 import { Navbar } from '@/components/ui/navbar';
 import { StockQuoteCard } from '@/components/ui/stock-quote-card';
 import { PriceChartContainer } from '@/components/ui/price-chart-container';
-
-// TODO: Future integration with tRPC for fetching real stock data
-// import { api } from '@/lib/api';
+import { serverApi } from '@/lib/trpc-server';
+import { TRPCError } from '@trpc/server';
+import type { StockDetailsData } from '@/lib/types/stock';
 
 interface StockDetailPageProps {
   params: Promise<{
@@ -11,48 +11,24 @@ interface StockDetailPageProps {
   }>;
 }
 
-interface StockInfo {
-  symbol: string;
-  companyName: string;
-  lastUpdated: string;
-}
-
-interface StockQuoteData {
-  price: number;
-  change: number;
-  percentChange: number;
-  open: number;
-  high: number;
-  low: number;
-  volume: number;
-  prevClose: number;
-}
-
 export default async function StockDetailPage({ params }: StockDetailPageProps): Promise<JSX.Element> {
   const { symbol } = await params;
   const decodedSymbol = decodeURIComponent(symbol);
 
-  // TODO: Replace with real data from tRPC in future stories
-  const mockStockInfo: StockInfo = {
-    symbol: decodedSymbol.toUpperCase(),
-    companyName: `${decodedSymbol.toUpperCase()} Company`,
-    lastUpdated: new Date().toISOString(),
-  };
+  // Fetch real stock data using SSR with tRPC
+  let stockData: StockDetailsData | null = null;
+  let error: string | undefined = undefined;
+  const isLoading = false; // SSR means data is always loaded by the time we render
 
-  const mockStockQuoteData: StockQuoteData = {
-    price: 150.25,
-    change: 2.34,
-    percentChange: 1.58,
-    open: 148.50,
-    high: 152.75,
-    low: 147.80,
-    volume: 1234567,
-    prevClose: 147.91,
-  };
-
-  // Simulate loading state - in real implementation this would come from tRPC loading state
-  const isLoading = false;
-  const error = undefined; // Could be set to simulate error: "Failed to fetch stock data"
+  try {
+    stockData = await serverApi.stock.getDetails({ symbol: decodedSymbol });
+  } catch (err) {
+    if (err instanceof TRPCError) {
+      error = err.message;
+    } else {
+      error = 'Failed to fetch stock data. Please try again later.';
+    }
+  }
 
   return (
     <div className="min-h-screen bg-base-100">
@@ -65,14 +41,17 @@ export default async function StockDetailPage({ params }: StockDetailPageProps):
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <div>
                 <h1 className="text-4xl lg:text-5xl font-bold text-base-content mb-2">
-                  {mockStockInfo.symbol}
+                  {stockData?.symbol || decodedSymbol.toUpperCase()}
                 </h1>
                 <p className="text-xl text-base-content/70">
-                  {mockStockInfo.companyName}
+                  {stockData?.companyName || `${decodedSymbol.toUpperCase()} Company`}
                 </p>
               </div>
               <div className="badge badge-outline badge-lg">
-                Last Updated: {new Date(mockStockInfo.lastUpdated).toLocaleTimeString()}
+                Last Updated: {stockData?.lastUpdated 
+                  ? new Date(stockData.lastUpdated).toLocaleTimeString()
+                  : 'N/A'
+                }
               </div>
             </div>
           </div>
@@ -82,7 +61,7 @@ export default async function StockDetailPage({ params }: StockDetailPageProps):
             {/* Stock Quote Data Section */}
             <div>
               <StockQuoteCard 
-                data={mockStockQuoteData}
+                data={stockData?.quote}
                 isLoading={isLoading}
                 error={error}
               />
@@ -91,7 +70,8 @@ export default async function StockDetailPage({ params }: StockDetailPageProps):
             {/* Price Chart Container */}
             <div>
               <PriceChartContainer 
-                symbol={mockStockInfo.symbol}
+                symbol={stockData?.symbol || decodedSymbol.toUpperCase()}
+                historicalData={stockData?.historicalData}
                 isLoading={isLoading}
                 error={error}
               />

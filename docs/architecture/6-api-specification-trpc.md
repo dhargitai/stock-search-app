@@ -16,11 +16,25 @@ export const stockRouter = createTRPCRouter({
       // Logic to call Alphavantage SYMBOL_SEARCH API
       // Return type: { symbol: string, name: string }[]
     }),
-  getDetails: publicProcedure
-    .input(z.object({ symbol: z.string().min(1) }))
+  getGlobalQuote: publicProcedure
+    .input(z.object({ symbol: z.string().min(1).max(10) }))
     .query(async ({ input }) => {
-      // Logic to call GLOBAL_QUOTE and TIME_SERIES_DAILY_ADJUSTED
-      // Return combined data
+      // Calls Alphavantage GLOBAL_QUOTE API
+      // Returns: StockQuoteData with price, change, OHLC, volume
+    }),
+  getTimeSeriesDaily: publicProcedure
+    .input(z.object({ symbol: z.string().min(1).max(10) }))
+    .query(async ({ input }) => {
+      // Calls Alphavantage TIME_SERIES_DAILY API (free tier compatible)
+      // Returns: ChartDataPoint[] with 30 days historical data
+    }),
+  getDetails: publicProcedure
+    .input(z.object({ symbol: z.string().min(1).max(10) }))
+    .query(async ({ input }) => {
+      // **IMPLEMENTED**: Combines GLOBAL_QUOTE and TIME_SERIES_DAILY APIs
+      // **CHANGE**: Uses TIME_SERIES_DAILY (free tier) instead of TIME_SERIES_DAILY_ADJUSTED
+      // **BUG FIX APPLIED**: Removed database condition preventing SSR API calls
+      // Returns: StockDetailsData with quote + historicalData for SSR
     }),
 });
 
