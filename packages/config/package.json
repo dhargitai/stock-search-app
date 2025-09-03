@@ -1,0 +1,12 @@
+{
+  "name": "@peak-finance/config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "eslint-preset.js",
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.0.0"
+  }
+}

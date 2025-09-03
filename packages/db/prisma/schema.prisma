@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations for future features
+  portfolios Portfolio[]
+  watchlists Watchlist[]
+
+  @@map("users")
+}
+
+model Portfolio {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings PortfolioHolding[]
+
+  @@map("portfolios")
+}
+
+model PortfolioHolding {
+  id          String  @id @default(cuid())
+  portfolioId String
+  symbol      String
+  quantity    Decimal
+  avgPrice    Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, symbol])
+  @@map("portfolio_holdings")
+}
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stocks WatchlistStock[]
+
+  @@map("watchlists")
+}
+
+model WatchlistStock {
+  id          String @id @default(cuid())
+  watchlistId String
+  symbol      String
+  createdAt   DateTime @default(now())
+
+  watchlist Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+
+  @@unique([watchlistId, symbol])
+  @@map("watchlist_stocks")
+}
+
+model StockData {
+  id               String   @id @default(cuid())
+  symbol           String   @unique
+  companyName      String
+  currentPrice     Decimal?
+  marketCap        Decimal?
+  peRatio          Decimal?
+  dividendYield    Decimal?
+  fiftyTwoWeekHigh Decimal?
+  fiftyTwoWeekLow  Decimal?
+  volume           BigInt?
+  avgVolume        BigInt?
+  lastUpdated      DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("stock_data")
+}
