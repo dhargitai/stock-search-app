@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
 
 interface SearchSuggestion {
   symbol: string;
@@ -10,47 +12,58 @@ interface SearchSuggestion {
 interface SearchInputProps {
   placeholder?: string;
   onSearch?: (query: string) => void;
-  suggestions?: SearchSuggestion[];
   className?: string;
+}
+
+// Custom hook for debouncing
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
 }
 
 export function SearchInput({ 
   placeholder = "Search symbol or company...", 
   onSearch,
-  suggestions,
   className = ''
 }: SearchInputProps): JSX.Element {
   const [query, setQuery] = useState<string>('');
-  const [internalSuggestions, setInternalSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
-  // Use external suggestions if provided, otherwise use internal ones
-  const activeSuggestions = suggestions ?? internalSuggestions;
+  // Debounce the query to avoid too many API calls
+  const debouncedQuery = useDebounce(query, 300);
+
+  // Use tRPC query for fetching suggestions
+  const {
+    data: suggestions = [],
+    isLoading,
+    isError,
+    error,
+  } = api.stock.search.useQuery(
+    { query: debouncedQuery },
+    {
+      enabled: debouncedQuery.length > 0,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    }
+  );
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const value = event.target.value;
     setQuery(value);
     
-    // Generate internal suggestions if no external ones provided
-    if (!suggestions) {
-      if (value.toLowerCase().includes('aapl')) {
-        setInternalSuggestions([
-          { symbol: 'AAPL', name: 'Apple Inc.' },
-          { symbol: 'AAP', name: 'Advance Auto Parts' },
-          { symbol: 'APLS', name: 'Apellis Pharmaceuticals' },
-        ]);
-      } else if (value.length > 0) {
-        setInternalSuggestions([
-          { symbol: 'MSFT', name: 'Microsoft Corporation' },
-          { symbol: 'GOOGL', name: 'Alphabet Inc.' },
-        ]);
-      } else {
-        setInternalSuggestions([]);
-      }
-    }
-    
-    setShowSuggestions(value.length > 0 && activeSuggestions.length > 0);
+    setShowSuggestions(value.length > 0);
     
     if (onSearch) {
       onSearch(value);
@@ -58,7 +71,7 @@ export function SearchInput({
   };
 
   const handleInputFocus = (): void => {
-    if (query.length > 0 && activeSuggestions.length > 0) {
+    if (query.length > 0 && suggestions.length > 0) {
       setShowSuggestions(true);
     }
   };
@@ -73,6 +86,10 @@ export function SearchInput({
   const handleSuggestionClick = (suggestion: SearchSuggestion): void => {
     setQuery(suggestion.symbol);
     setShowSuggestions(false);
+    
+    // Navigate to the stock detail page
+    router.push(`/${encodeURIComponent(suggestion.symbol)}` as any);
+    
     if (onSearch) {
       onSearch(suggestion.symbol);
     }
@@ -131,27 +148,50 @@ export function SearchInput({
       </div>
 
       {/* Suggestions Dropdown */}
-      {showSuggestions && activeSuggestions.length > 0 && (
+      {showSuggestions && (
         <div className="absolute z-10 w-full mt-1 bg-base-100 border border-base-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-          <ul id="suggestions-list" role="listbox" className="menu p-0">
-            {activeSuggestions.map((suggestion, index) => (
-              <li key={`${suggestion.symbol}-${index}`}>
-                <button
-                  type="button"
-                  className="w-full text-left px-4 py-3 hover:bg-base-200 focus:bg-base-200 border-b border-base-300 last:border-b-0"
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  role="option"
-                  aria-selected={false}
-                >
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-sm">
-                      {suggestion.name} ({suggestion.symbol})
-                    </span>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
+          {isLoading && (
+            <div className="flex items-center justify-center p-4">
+              <span className="loading loading-spinner loading-sm mr-2"></span>
+              <span className="text-base-content/70">Searching...</span>
+            </div>
+          )}
+          
+          {isError && (
+            <div className="p-4 text-center text-error">
+              <span className="text-sm">
+                {error?.message || 'Failed to load suggestions. Please try again.'}
+              </span>
+            </div>
+          )}
+          
+          {!isLoading && !isError && suggestions.length === 0 && debouncedQuery.length > 0 && (
+            <div className="p-4 text-center text-base-content/70">
+              <span className="text-sm">No matching stocks found.</span>
+            </div>
+          )}
+          
+          {!isLoading && !isError && suggestions.length > 0 && (
+            <ul id="suggestions-list" role="listbox" className="menu p-0">
+              {suggestions.map((suggestion, index) => (
+                <li key={`${suggestion.symbol}-${index}`}>
+                  <button
+                    type="button"
+                    className="w-full text-left px-4 py-3 hover:bg-base-200 focus:bg-base-200 border-b border-base-300 last:border-b-0"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    role="option"
+                    aria-selected={false}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-sm">
+                        {suggestion.name} ({suggestion.symbol})
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>

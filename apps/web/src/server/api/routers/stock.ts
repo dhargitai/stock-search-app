@@ -1,34 +1,82 @@
 import { z } from 'zod';
-import { createTRPCRouter, publicProcedure } from '../../trpc';
+import { TRPCError } from '@trpc/server';
+import { createTRPCRouter, publicProcedure } from '../trpc';
+import { env } from '@/lib/env';
+
+interface AlphaVantageSearchMatch {
+  '1. symbol': string;
+  '2. name': string;
+  '3. type': string;
+  '4. region': string;
+  '5. marketOpen': string;
+  '6. marketClose': string;
+  '7. timezone': string;
+  '8. currency': string;
+  '9. matchScore': string;
+}
+
+interface AlphaVantageSearchResponse {
+  bestMatches: AlphaVantageSearchMatch[];
+  'Error Message'?: string;
+  'Note'?: string;
+}
 
 export const stockRouter = createTRPCRouter({
   search: publicProcedure
     .input(z.object({ query: z.string().min(1).max(50) }))
-    .query(async ({ input, ctx }) => {
-      // This is a placeholder implementation
-      // In the actual implementation, this will search for stocks
+    .query(async ({ input }) => {
       const { query } = input;
-      
-      // Example placeholder data
-      return {
-        query,
-        results: [
-          {
-            symbol: 'AAPL',
-            name: 'Apple Inc.',
-            price: 150.25,
-            change: 2.45,
-            changePercent: 1.66,
-          },
-          {
-            symbol: 'GOOGL',
-            name: 'Alphabet Inc.',
-            price: 2750.10,
-            change: -15.30,
-            changePercent: -0.55,
-          },
-        ],
-      };
+
+      try {
+        const response = await fetch(
+          `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${encodeURIComponent(
+            query
+          )}&apikey=${env.ALPHA_VANTAGE_API_KEY}`
+        );
+
+        if (!response.ok) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to fetch stock data from Alpha Vantage',
+          });
+        }
+
+        const data = (await response.json()) as AlphaVantageSearchResponse;
+
+        // Handle API error responses
+        if (data['Error Message']) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: data['Error Message'],
+          });
+        }
+
+        // Handle API rate limit
+        if (data['Note']) {
+          throw new TRPCError({
+            code: 'TOO_MANY_REQUESTS',
+            message: 'API rate limit exceeded. Please try again later.',
+          });
+        }
+
+        // Transform the response to match our expected format
+        const suggestions = (data.bestMatches || []).map((match) => ({
+          symbol: match['1. symbol'],
+          name: match['2. name'],
+        }));
+
+        return suggestions;
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        // Handle network errors or JSON parsing errors
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to search for stocks. Please try again later.',
+        });
+      }
     }),
 
   getById: publicProcedure
