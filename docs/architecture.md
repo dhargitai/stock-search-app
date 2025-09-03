@@ -256,3 +256,17 @@ sequenceDiagram
 - **API Interaction**: All data fetching must be done through tRPC hooks (`api.stock.search.useQuery`). Direct `fetch` calls are not allowed.
 - **Database Interaction**: All database operations must go through the Prisma client. No raw SQL queries are permitted.
 - **Error Handling**: All tRPC procedures must include structured error handling and return specific tRPC error codes.
+- **UI Development**: When creating UI components, always use DaisyUI and TailwindCSS classes to ensure consistent styling and layout. Always try to look up DaisyUI and TailwindCSS documentation first for the best practices and how to use a component. Never use inline styles or CSS classes.
+- **Next.js Component Architecture**: Components are Server Components by default unless explicitly marked with `'use client'`. Never add `'use client'` unless the component requires:
+  - React hooks (`useState`, `useEffect`, `useContext`, etc.)
+  - Browser-only APIs (localStorage, window, document)
+  - Event handlers (onClick, onChange, etc.)
+  - Third-party libraries that use browser APIs
+- **Minimize Client Component Boundaries**: Only mark the smallest possible component as `'use client'`. Never mark parent components as Client Components when only a child needs interactivity.
+  - ❌ BAD: Making entire page a Client Component
+  - ✅ GOOD: Only interactive components (forms, buttons with state) as Client Components
+- **Component Hierarchy**: Structure components to maximize SSR benefits:
+  - Pages and layouts: Server Components (no `'use client'`)
+  - Static UI components: Server Components (navigation bars, footers, headers)
+  - Interactive components: Client Components (search inputs, forms, modals)
+- **State Management Location**: Keep state in the lowest component that needs it. If only SearchInput needs suggestions state, don't lift it to the page level.
