@@ -1,189 +1,374 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { PriceChartContainer } from '../price-chart-container';
+import type { ChartDataPoint } from '@/lib/types/stock';
+
+// Mock echarts-for-react
+vi.mock('echarts-for-react', () => ({
+  default: vi.fn(({ option, style, className }) => (
+    <div 
+      data-testid="echarts-mock"
+      data-option={JSON.stringify(option)}
+      style={style}
+      className={className}
+    >
+      Mocked ECharts Component
+    </div>
+  ))
+}));
+
+// Mock data for testing
+const mockHistoricalData: ChartDataPoint[] = [
+  {
+    date: '2023-12-01',
+    open: 150.0,
+    high: 155.0,
+    low: 149.0,
+    close: 152.5,
+    volume: 1000000
+  },
+  {
+    date: '2023-12-02',
+    open: 152.5,
+    high: 157.0,
+    low: 151.0,
+    close: 156.2,
+    volume: 1200000
+  },
+  {
+    date: '2023-12-03',
+    open: 156.2,
+    high: 158.5,
+    low: 154.0,
+    close: 157.8,
+    volume: 900000
+  },
+  {
+    date: '2023-12-04',
+    open: 157.8,
+    high: 160.0,
+    low: 157.0,
+    close: 159.3,
+    volume: 1100000
+  },
+  {
+    date: '2023-12-05',
+    open: 159.3,
+    high: 162.0,
+    low: 158.5,
+    close: 161.7,
+    volume: 1300000
+  }
+];
 
 describe('PriceChartContainer', () => {
-  const defaultProps = {
-    symbol: 'AAPL',
-  };
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   describe('Loading State', () => {
-    it('displays loading skeleton when isLoading is true', () => {
-      render(<PriceChartContainer {...defaultProps} isLoading={true} />);
-      
-      const skeletons = screen.getAllByRole('generic');
-      const loadingElements = skeletons.filter(element => 
-        element.className.includes('skeleton')
+    it('should render loading skeleton when isLoading is true', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          isLoading={true}
+        />
       );
-      
-      expect(loadingElements.length).toBeGreaterThan(0);
-    });
 
-    it('shows multiple skeleton elements for chart structure', () => {
-      render(<PriceChartContainer {...defaultProps} isLoading={true} />);
-      
-      // Check for different skeleton sizes representing different chart parts
-      const skeletons = screen.getAllByRole('generic');
-      const chartSkeleton = skeletons.find(element => 
-        element.className.includes('skeleton') && element.className.includes('h-64')
-      );
-      
-      expect(chartSkeleton).toBeInTheDocument();
+      // Check for skeleton elements rather than specific text during loading
+      const skeletons = document.querySelectorAll('.skeleton');
+      expect(skeletons.length).toBeGreaterThan(0);
     });
   });
 
   describe('Error State', () => {
-    it('displays error message when error prop is provided', () => {
-      const errorMessage = 'Failed to load chart data';
-      render(<PriceChartContainer {...defaultProps} error={errorMessage} />);
+    it('should render error display when error is provided', () => {
+      const errorMessage = 'Failed to fetch stock data';
       
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          error={errorMessage}
+        />
+      );
+
       expect(screen.getByText('Chart Unavailable')).toBeInTheDocument();
       expect(screen.getByText(errorMessage)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
-    });
-
-    it('applies error styling correctly', () => {
-      render(<PriceChartContainer {...defaultProps} error="Network error" />);
-      
-      const errorCard = screen.getByText('Chart Unavailable').closest('.card');
-      expect(errorCard).toHaveClass('bg-error/10');
-      expect(errorCard).toHaveClass('border-error/20');
+      expect(screen.getByText('Retry')).toBeInTheDocument();
     });
   });
 
-  describe('Placeholder Display', () => {
-    it('displays chart placeholder with symbol', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
+  describe('No Data State', () => {
+    it('should render no data message when historicalData is empty', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={[]}
+        />
+      );
+
+      expect(screen.getByText('No Chart Data Available')).toBeInTheDocument();
+      expect(screen.getByText('Historical price data for AAPL is not available at this time')).toBeInTheDocument();
+      expect(screen.getByText('Awaiting Data')).toBeInTheDocument();
+    });
+
+    it('should render no data message when historicalData is undefined', () => {
+      render(
+        <PriceChartContainer
+          symbol="TSLA"
+        />
+      );
+
+      expect(screen.getByText('No Chart Data Available')).toBeInTheDocument();
+      expect(screen.getByText('Historical price data for TSLA is not available at this time')).toBeInTheDocument();
+    });
+  });
+
+  describe('Chart Rendering with Data', () => {
+    it('should render chart component with valid data', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
+
       expect(screen.getByText('Price Chart')).toBeInTheDocument();
-      expect(screen.getByText(`Historical price data for ${defaultProps.symbol}`)).toBeInTheDocument();
+      expect(screen.getByText('Historical price data for AAPL')).toBeInTheDocument();
+      expect(screen.getByTestId('echarts-mock')).toBeInTheDocument();
     });
 
-    it('shows Apache ECharts ready badge', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      expect(screen.getByText('Apache ECharts Ready')).toBeInTheDocument();
+    it('should render time period selector buttons', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
+
+      expect(screen.getByText('1D')).toBeInTheDocument();
+      expect(screen.getByText('5D')).toBeInTheDocument();
+      expect(screen.getByText('1M')).toBeInTheDocument();
+      expect(screen.getByText('1Y')).toBeInTheDocument();
     });
 
-    it('displays interactive chart message', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      expect(screen.getByText('Interactive Chart Coming Soon')).toBeInTheDocument();
-      expect(screen.getByText(/This container is prepared for Apache ECharts integration/)).toBeInTheDocument();
+    it('should have default selected period as 1M', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
+
+      const button1M = screen.getByText('1M');
+      expect(button1M).toHaveClass('btn-active');
     });
 
-    it('shows timeframe buttons', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      expect(screen.getByRole('button', { name: '1D' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '5D' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '1M' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '1Y' })).toBeInTheDocument();
+    it('should change active period when button is clicked', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
+
+      const button1D = screen.getByText('1D');
+      const button1M = screen.getByText('1M');
+
+      expect(button1M).toHaveClass('btn-active');
+      expect(button1D).not.toHaveClass('btn-active');
+
+      fireEvent.click(button1D);
+
+      expect(button1D).toHaveClass('btn-active');
+      expect(button1M).not.toHaveClass('btn-active');
     });
 
-    it('shows active state for default timeframe', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      const oneDayButton = screen.getByRole('button', { name: '1D' });
-      expect(oneDayButton).toHaveClass('btn-active');
+    it('should render chart info badges', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
+
+      expect(screen.getByText('Live Data')).toBeInTheDocument();
+      expect(screen.getByText('Close Price')).toBeInTheDocument();
+      expect(screen.getByText('5 data points')).toBeInTheDocument();
     });
 
-    it('displays chart control badges', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      expect(screen.getByText('Candlestick')).toBeInTheDocument();
-      expect(screen.getByText('Volume')).toBeInTheDocument();
-      expect(screen.getByText('Moving Averages')).toBeInTheDocument();
-    });
+    it('should display price range information', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
 
-    it('shows last updated timestamp', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      expect(screen.getByText(/Last updated:/)).toBeInTheDocument();
-    });
-
-    it('renders chart placeholder visual elements', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      // Check for SVG chart placeholder (SVG doesn't have img role by default)
-      const svgElement = document.querySelector('svg');
-      expect(svgElement).toBeInTheDocument();
-      
-      // Check for chart emoji
-      expect(screen.getByText('📈')).toBeInTheDocument();
-    });
-  });
-
-  describe('Responsive Design', () => {
-    it('applies responsive container classes', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      const chartContainer = screen.getByText('Interactive Chart Coming Soon').closest('.card-body');
-      const chart = chartContainer?.querySelector('.h-80');
-      expect(chart).toHaveClass('lg:h-96');
-    });
-
-    it('uses responsive flex layout for header', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      const header = screen.getByText('Price Chart').closest('div');
-      const parentDiv = header?.parentElement;
-      expect(parentDiv).toHaveClass('sm:flex-row');
-      expect(parentDiv).toHaveClass('sm:items-center');
-      expect(parentDiv).toHaveClass('sm:justify-between');
-    });
-
-    it('applies responsive controls layout', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      // Find the timestamp text to locate the chart controls container
-      const timestampDiv = screen.getByText(/Last updated:/).closest('div');
-      const controlsSection = timestampDiv?.parentElement;
-      
-      // Check for responsive flex classes in the chart controls container
-      expect(controlsSection).toHaveClass('flex');
-      expect(controlsSection).toHaveClass('flex-col');
-      expect(controlsSection).toHaveClass('sm:flex-row');
+      // The range should show min and max close prices from the data
+      expect(screen.getByText('Range: $152.50 - $161.70')).toBeInTheDocument();
     });
   });
 
-  describe('Custom className', () => {
-    it('applies custom className to wrapper', () => {
+  describe('Data Filtering by Period', () => {
+    it('should filter data correctly for 1D period', async () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
+
+      const button1D = screen.getByText('1D');
+      fireEvent.click(button1D);
+
+      await waitFor(() => {
+        expect(screen.getByText('1 data points')).toBeInTheDocument();
+      });
+    });
+
+    it('should filter data correctly for 5D period', async () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
+
+      const button5D = screen.getByText('5D');
+      fireEvent.click(button5D);
+
+      await waitFor(() => {
+        expect(screen.getByText('5 data points')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Chart Configuration', () => {
+    it('should pass correct options to ECharts component', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
+
+      const echartsElement = screen.getByTestId('echarts-mock');
+      const optionData = echartsElement.getAttribute('data-option');
+      const option = JSON.parse(optionData!);
+
+      expect(option).toHaveProperty('xAxis');
+      expect(option).toHaveProperty('yAxis');
+      expect(option).toHaveProperty('series');
+      expect(option).toHaveProperty('tooltip');
+      expect(option).toHaveProperty('grid');
+
+      // Check if series data contains close prices
+      expect(option.series[0].data).toEqual([152.5, 156.2, 157.8, 159.3, 161.7]);
+      
+      // Check if xAxis data contains dates
+      expect(option.xAxis.data).toEqual(['2023-12-01', '2023-12-02', '2023-12-03', '2023-12-04', '2023-12-05']);
+    });
+
+    it('should have correct chart styling', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
+
+      const echartsElement = screen.getByTestId('echarts-mock');
+      const style = echartsElement.getAttribute('style');
+      
+      expect(style).toContain('height: 400px');
+      expect(style).toContain('width: 100%');
+    });
+  });
+
+  describe('Component Props', () => {
+    it('should apply custom className', () => {
       const customClass = 'custom-chart-class';
       const { container } = render(
-        <PriceChartContainer {...defaultProps} className={customClass} />
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+          className={customClass}
+        />
       );
-      
+
       expect(container.firstChild).toHaveClass(customClass);
+    });
+
+    it('should display correct symbol in chart header', () => {
+      const symbol = 'MSFT';
+      
+      render(
+        <PriceChartContainer
+          symbol={symbol}
+          historicalData={mockHistoricalData}
+        />
+      );
+
+      expect(screen.getByText(`Historical price data for ${symbol}`)).toBeInTheDocument();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle single data point correctly', () => {
+      const singleDataPoint = [mockHistoricalData[0]];
+      
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={singleDataPoint}
+        />
+      );
+
+      expect(screen.getByText('1 data points')).toBeInTheDocument();
+      expect(screen.getByText('Range: $152.50 - $152.50')).toBeInTheDocument();
+    });
+
+    it('should handle data with same close prices', () => {
+      const sameCloseData = mockHistoricalData.map(item => ({
+        ...item,
+        close: 150.0
+      }));
+      
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={sameCloseData}
+        />
+      );
+
+      expect(screen.getByText('Range: $150.00 - $150.00')).toBeInTheDocument();
     });
   });
 
   describe('Accessibility', () => {
-    it('has proper button roles and labels', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
+    it('should have proper button roles for period selectors', () => {
+      render(
+        <PriceChartContainer
+          symbol="AAPL"
+          historicalData={mockHistoricalData}
+        />
+      );
+
       const buttons = screen.getAllByRole('button');
-      expect(buttons.length).toBeGreaterThan(0);
-      
-      // Check timeframe buttons are accessible
-      expect(screen.getByRole('button', { name: '1D' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '5D' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '1M' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '1Y' })).toBeInTheDocument();
-    });
+      const periodButtons = buttons.filter(btn => 
+        ['1D', '5D', '1M', '1Y'].includes(btn.textContent || '')
+      );
 
-    it('provides accessible error recovery', () => {
-      render(<PriceChartContainer {...defaultProps} error="Network error" />);
-      
-      const retryButton = screen.getByRole('button', { name: /retry/i });
-      expect(retryButton).toBeInTheDocument();
-    });
-
-    it('has descriptive text for screen readers', () => {
-      render(<PriceChartContainer {...defaultProps} />);
-      
-      expect(screen.getByText(`Historical price data for ${defaultProps.symbol}`)).toBeInTheDocument();
-      expect(screen.getByText(/This container is prepared for Apache ECharts integration/)).toBeInTheDocument();
+      expect(periodButtons).toHaveLength(4);
+      // Check that buttons are actually clickable
+      periodButtons.forEach(button => {
+        expect(button.tagName).toBe('BUTTON');
+      });
     });
   });
 });

@@ -1,4 +1,43 @@
+'use client';
+
+import { useState, useMemo, useEffect, useRef } from 'react';
+import ReactECharts from 'echarts-for-react';
 import type { ChartDataPoint } from '@/lib/types/stock';
+
+// Utility to get theme colors with proper fallbacks
+function getThemeColors() {
+  if (typeof window === 'undefined') {
+    // Fallback colors for SSR matching Peak Finance theme
+    return {
+      primary: '#3b82f6',
+      primaryAlpha30: '#3b82f64d', // 30% opacity
+      primaryAlpha5: '#3b82f60d',  // 5% opacity
+      text: '#1f2937',
+      textMuted: '#1f293799', // 60% opacity
+      gridLight: '#e2e8f01a', // 10% opacity
+      borderLight: '#e2e8f033', // 20% opacity
+      background: '#ffffff'
+    };
+  }
+
+  // Get computed CSS variables with fallbacks
+  const computedStyle = getComputedStyle(document.documentElement);
+  const primary = computedStyle.getPropertyValue('--color-primary').trim() || '#3b82f6';
+  const text = computedStyle.getPropertyValue('--color-base-content').trim() || '#1f2937';
+  const background = computedStyle.getPropertyValue('--color-base-100').trim() || '#ffffff';
+  const borderColor = computedStyle.getPropertyValue('--color-base-300').trim() || '#e2e8f0';
+  
+  return {
+    primary,
+    primaryAlpha30: primary + '4d', // 30% opacity
+    primaryAlpha5: primary + '0d',  // 5% opacity
+    text,
+    textMuted: text + '99', // 60% opacity
+    gridLight: borderColor + '1a', // 10% opacity
+    borderLight: borderColor + '33', // 20% opacity
+    background
+  };
+}
 
 interface PriceChartContainerProps {
   symbol: string;
@@ -40,7 +79,225 @@ function ChartErrorDisplay({ error }: { error: string }): JSX.Element {
   );
 }
 
-function ChartPlaceholder({ symbol, hasData = false }: { symbol: string; hasData?: boolean }): JSX.Element {
+function PriceChart({ symbol, data }: { symbol: string; data: ChartDataPoint[] }): JSX.Element {
+  const [selectedPeriod, setSelectedPeriod] = useState('1M');
+  const chartRef = useRef<any>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Get theme colors with proper CSS variable resolution
+  const colors = useMemo(() => getThemeColors(), []);
+
+  // Transform data for ECharts with validation
+  const chartData = useMemo(() => {
+    if (!data || data.length === 0) return null;
+
+    try {
+      // Filter data based on selected period
+      let filteredData = data.filter(item => 
+        item && 
+        typeof item.date === 'string' && 
+        typeof item.close === 'number' && 
+        !isNaN(item.close)
+      );
+      
+      switch (selectedPeriod) {
+        case '1D':
+          filteredData = filteredData.slice(-1);
+          break;
+        case '5D':
+          filteredData = filteredData.slice(-5);
+          break;
+        case '1M':
+          filteredData = filteredData.slice(-20);
+          break;
+        case '1Y':
+          filteredData = filteredData; // Show all available data
+          break;
+      }
+
+      if (filteredData.length === 0) return null;
+
+      const dates = filteredData.map(item => item.date);
+      const prices = filteredData.map(item => item.close);
+
+      // Validate that we have valid price data
+      const validPrices = prices.filter(price => typeof price === 'number' && !isNaN(price));
+      if (validPrices.length === 0) return null;
+
+      return {
+        dates,
+        prices,
+        minPrice: Math.min(...validPrices),
+        maxPrice: Math.max(...validPrices)
+      };
+    } catch (error) {
+      console.error('Error transforming chart data:', error);
+      return null;
+    }
+  }, [data, selectedPeriod]);
+
+  const chartOption = useMemo(() => {
+    if (!chartData || !chartData.dates.length || !chartData.prices.length) return null;
+
+    try {
+      return {
+        grid: {
+          top: 20,
+          right: 20,
+          bottom: 60,
+          left: 60,
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          data: chartData.dates,
+          axisLine: {
+            lineStyle: {
+              color: colors.borderLight
+            }
+          },
+          axisLabel: {
+            color: colors.textMuted,
+            formatter: function(value: string) {
+              try {
+                return new Date(value).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric'
+                });
+              } catch {
+                return value;
+              }
+            }
+          }
+        },
+        yAxis: {
+          type: 'value',
+          scale: true,
+          axisLine: {
+            lineStyle: {
+              color: colors.borderLight
+            }
+          },
+          axisLabel: {
+            color: colors.textMuted,
+            formatter: function(value: number) {
+              return '$' + (typeof value === 'number' ? value.toFixed(2) : '0.00');
+            }
+          },
+          splitLine: {
+            lineStyle: {
+              color: colors.gridLight
+            }
+          }
+        },
+        series: [{
+          data: chartData.prices,
+          type: 'line',
+          smooth: true,
+          symbol: 'none',
+          lineStyle: {
+            color: colors.primary,
+            width: 3
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [{
+                offset: 0,
+                color: colors.primaryAlpha30
+              }, {
+                offset: 1,
+                color: colors.primaryAlpha5
+              }]
+            }
+          },
+          animationDelay: 0
+        }],
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: colors.background,
+          borderColor: colors.borderLight,
+          borderWidth: 1,
+          textStyle: {
+            color: colors.text
+          },
+          extraCssText: 'box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);',
+          formatter: function(params: any) {
+            if (!params || !Array.isArray(params) || params.length === 0) return '';
+            
+            try {
+              const dataPoint = params[0];
+              if (!dataPoint || dataPoint.name === undefined || dataPoint.value === undefined) return '';
+              
+              const date = new Date(dataPoint.name).toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              });
+              const price = typeof dataPoint.value === 'number' ? dataPoint.value.toFixed(2) : '0.00';
+              return `${date}<br/>Price: $${price}`;
+            } catch (error) {
+              console.error('Tooltip formatter error:', error);
+              return 'Data unavailable';
+            }
+          }
+        },
+        animation: !isAnimating,
+        animationDuration: isAnimating ? 0 : 800,
+        animationEasing: 'cubicOut'
+      };
+    } catch (error) {
+      console.error('Error creating chart options:', error);
+      return null;
+    }
+  }, [chartData, colors, isAnimating]);
+
+  // Handle period changes with animation control
+  const handlePeriodChange = (period: string) => {
+    if (period === selectedPeriod) return;
+    
+    setIsAnimating(true);
+    setSelectedPeriod(period);
+    
+    // Reset animation flag after update
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 100);
+  };
+
+  if (!chartData || !chartOption) {
+    return (
+      <div className="w-full">
+        {/* Chart Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-xl font-semibold">Price Chart</h3>
+            <p className="text-base-content/70 text-sm">Historical price data for {symbol}</p>
+          </div>
+        </div>
+
+        {/* No Data Message */}
+        <div className="card bg-base-100 border border-base-300 min-h-[400px]">
+          <div className="card-body flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <div className="text-4xl">📊</div>
+              <div>
+                <h4 className="text-lg font-semibold mb-2">No Chart Data Available</h4>
+                <p className="text-base-content/70 text-sm">Unable to load historical price data for {symbol}</p>
+              </div>
+              <div className="badge badge-warning">No Data</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       {/* Chart Header */}
@@ -51,74 +308,56 @@ function ChartPlaceholder({ symbol, hasData = false }: { symbol: string; hasData
         </div>
         <div className="flex gap-2">
           <div className="btn-group">
-            <button className="btn btn-sm btn-active">1D</button>
-            <button className="btn btn-sm">5D</button>
-            <button className="btn btn-sm">1M</button>
-            <button className="btn btn-sm">1Y</button>
+            <button 
+              className={`btn btn-sm ${selectedPeriod === '1D' ? 'btn-active' : ''}`}
+              onClick={() => handlePeriodChange('1D')}
+            >
+              1D
+            </button>
+            <button 
+              className={`btn btn-sm ${selectedPeriod === '5D' ? 'btn-active' : ''}`}
+              onClick={() => handlePeriodChange('5D')}
+            >
+              5D
+            </button>
+            <button 
+              className={`btn btn-sm ${selectedPeriod === '1M' ? 'btn-active' : ''}`}
+              onClick={() => handlePeriodChange('1M')}
+            >
+              1M
+            </button>
+            <button 
+              className={`btn btn-sm ${selectedPeriod === '1Y' ? 'btn-active' : ''}`}
+              onClick={() => handlePeriodChange('1Y')}
+            >
+              1Y
+            </button>
           </div>
         </div>
       </div>
 
       {/* Chart Container */}
-      <div className="card bg-base-100 border border-base-300 min-h-[400px] lg:min-h-[500px]">
+      <div className="card bg-base-100 border border-base-300">
         <div className="card-body p-6">
-          <div className="flex items-center justify-center h-80 lg:h-96 bg-gradient-to-br from-base-200 to-base-300 rounded-lg relative overflow-hidden">
-            {/* Placeholder Chart Visual */}
-            <div className="absolute inset-0 opacity-10">
-              <svg className="w-full h-full" viewBox="0 0 400 200" fill="none">
-                <polyline
-                  points="10,150 50,100 100,120 150,80 200,90 250,60 300,40 350,70 390,50"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  fill="none"
-                  className="text-primary"
-                />
-                <polyline
-                  points="10,180 50,160 100,140 150,120 200,100 250,80 300,100 350,90 390,110"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  fill="none"
-                  className="text-secondary opacity-60"
-                />
-              </svg>
-            </div>
+          <ReactECharts 
+            ref={chartRef}
+            option={chartOption}
+            style={{ height: '400px', width: '100%' }}
+            opts={{ renderer: 'canvas' }}
+            className="w-full"
+          />
 
-            {/* Content */}
-            <div className="text-center space-y-4 z-10">
-              <div className="text-6xl">📈</div>
-              <div>
-                <h4 className="text-lg font-semibold mb-2">
-                  {hasData ? 'Chart Data Available' : 'Interactive Chart Coming Soon'}
-                </h4>
-                <p className="text-base-content/70 text-sm max-w-md mx-auto">
-                  {hasData 
-                    ? `Historical price data for ${symbol} has been loaded and is ready for Apache ECharts integration.`
-                    : 'This container is prepared for Apache ECharts integration to display interactive price charts with multiple timeframes and technical indicators.'
-                  }
-                </p>
-              </div>
-              <div className={`badge badge-lg ${
-                hasData ? 'badge-success' : 'badge-info'
-              }`}>
-                {hasData ? 'Data Loaded' : 'Apache ECharts Ready'}
-              </div>
-              {hasData && (
-                <div className="text-xs text-base-content/50 mt-2">
-                  Ready for line chart integration
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Chart Controls Placeholder */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 pt-4 border-t border-base-300">
-            <div className="flex gap-2 flex-wrap">
-              <div className="badge badge-outline">Candlestick</div>
-              <div className="badge badge-outline">Volume</div>
-              <div className="badge badge-outline">Moving Averages</div>
+          {/* Chart Info */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t border-base-300">
+            <div className="flex gap-2 flex-wrap items-center">
+              <div className="badge badge-success badge-sm">Live Data</div>
+              <div className="badge badge-outline badge-sm">Close Price</div>
+              <span className="text-xs text-base-content/50">
+                {chartData.prices.length} data points
+              </span>
             </div>
             <div className="text-sm text-base-content/50">
-              Last updated: {new Date().toLocaleTimeString()}
+              Range: ${chartData.minPrice.toFixed(2)} - ${chartData.maxPrice.toFixed(2)}
             </div>
           </div>
         </div>
@@ -152,9 +391,39 @@ export function PriceChartContainer({
 
   const hasData = historicalData && historicalData.length > 0;
 
+  if (!hasData) {
+    return (
+      <div className={className}>
+        <div className="w-full">
+          {/* Chart Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+              <h3 className="text-xl font-semibold">Price Chart</h3>
+              <p className="text-base-content/70 text-sm">Historical price data for {symbol}</p>
+            </div>
+          </div>
+
+          {/* No Data Message */}
+          <div className="card bg-base-100 border border-base-300 min-h-[400px]">
+            <div className="card-body flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <div className="text-4xl">📊</div>
+                <div>
+                  <h4 className="text-lg font-semibold mb-2">No Chart Data Available</h4>
+                  <p className="text-base-content/70 text-sm">Historical price data for {symbol} is not available at this time</p>
+                </div>
+                <div className="badge badge-info">Awaiting Data</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={className}>
-      <ChartPlaceholder symbol={symbol} hasData={hasData} />
+      <PriceChart symbol={symbol} data={historicalData} />
     </div>
   );
 }
