@@ -1,0 +1,36 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Corresponds to Supabase's auth.users table
+model User {
+  id             String          @id @db.Uuid
+  email          String?         @unique
+  name           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  watchlistItems WatchlistItem[]
+
+  @@map("users")
+}
+
+model WatchlistItem {
+  id        Int      @id @default(autoincrement())
+  symbol    String
+  createdAt DateTime @default(now())
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, symbol])
+  @@map("watchlist_items")
+}
