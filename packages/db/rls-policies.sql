@@ -1,9 +1,25 @@
--- Row Level Security (RLS) Policies for watchlist_items table
--- This file implements security policies to ensure users can only access their own watchlist data
+-- Row Level Security (RLS) Policies for users and watchlist_items tables
+-- This file implements security policies to ensure users can only access their own data
+
+-- Enable Row Level Security on users table
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 -- Enable Row Level Security on watchlist_items table
 ALTER TABLE public.watchlist_items ENABLE ROW LEVEL SECURITY;
 
+-- Users table RLS policies
+-- Policy 1: SELECT - Users can only view their own user record
+CREATE POLICY "Enable users to view their own profile" ON public.users
+    FOR SELECT 
+    USING (auth.uid() = id);
+
+-- Policy 2: UPDATE - Users can only update their own user record
+CREATE POLICY "Enable users to update their own profile" ON public.users
+    FOR UPDATE 
+    USING (auth.uid() = id) 
+    WITH CHECK (auth.uid() = id);
+
+-- Watchlist items table RLS policies
 -- Policy 1: SELECT - Users can only view their own watchlist items
 -- This policy filters SELECT operations to only return rows where the userId matches the authenticated user's ID
 CREATE POLICY "Enable users to view their own watchlist items" ON public.watchlist_items

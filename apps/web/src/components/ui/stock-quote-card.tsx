@@ -113,10 +113,10 @@ export function StockQuoteCard({ data, isLoading, error }: StockQuoteCardProps):
         <div className="card-body text-center py-8">
           <div className="stat place-items-center">
             <div className="stat-title text-lg">Current Price</div>
-            <div className="stat-value text-4xl lg:text-5xl font-bold">
+            <div className="stat-value text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold break-all">
               {formatCurrency(data.price)}
             </div>
-            <div className={`stat-desc text-xl font-semibold ${changeColorClass}`}>
+            <div className={`stat-desc text-base sm:text-lg lg:text-xl font-semibold ${changeColorClass} break-words`}>
               {changePrefix}{formatCurrency(data.change)} ({changePrefix}{data.percentChange.toFixed(2)}%)
             </div>
           </div>
@@ -124,34 +124,34 @@ export function StockQuoteCard({ data, isLoading, error }: StockQuoteCardProps):
       </div>
 
       {/* Quote Details Grid */}
-      <div className="stats stats-vertical sm:stats-horizontal shadow w-full bg-base-100">
-        <div className="stat">
+      <div className="stats stats-vertical sm:stats-horizontal shadow w-full bg-base-100 overflow-hidden">
+        <div className="stat min-w-0">
           <div className="stat-title">Open</div>
-          <div className="stat-value text-2xl">{formatCurrency(data.open)}</div>
+          <div className="stat-value text-lg sm:text-xl lg:text-2xl break-all">{formatCurrency(data.open)}</div>
         </div>
 
-        <div className="stat">
+        <div className="stat min-w-0">
           <div className="stat-title">High</div>
-          <div className="stat-value text-2xl">{formatCurrency(data.high)}</div>
+          <div className="stat-value text-lg sm:text-xl lg:text-2xl break-all">{formatCurrency(data.high)}</div>
         </div>
 
-        <div className="stat">
+        <div className="stat min-w-0">
           <div className="stat-title">Low</div>
-          <div className="stat-value text-2xl">{formatCurrency(data.low)}</div>
+          <div className="stat-value text-lg sm:text-xl lg:text-2xl break-all">{formatCurrency(data.low)}</div>
         </div>
 
-        <div className="stat">
+        <div className="stat min-w-0">
           <div className="stat-title">Previous Close</div>
-          <div className="stat-value text-2xl">{formatCurrency(data.prevClose)}</div>
+          <div className="stat-value text-lg sm:text-xl lg:text-2xl break-all">{formatCurrency(data.prevClose)}</div>
         </div>
       </div>
 
       {/* Volume Section */}
-      <div className="stats shadow w-full bg-base-100 mt-4">
+      <div className="stats shadow w-full bg-base-100 mt-4 overflow-hidden">
         <div className="stat place-items-center">
           <div className="stat-title">Volume</div>
-          <div className="stat-value text-3xl">{formatVolume(data.volume)}</div>
-          <div className="stat-desc">{data.volume.toLocaleString('en-US')} shares</div>
+          <div className="stat-value text-xl sm:text-2xl lg:text-3xl">{formatVolume(data.volume)}</div>
+          <div className="stat-desc text-xs sm:text-sm break-words">{data.volume.toLocaleString('en-US')} shares</div>
         </div>
       </div>
     </div>

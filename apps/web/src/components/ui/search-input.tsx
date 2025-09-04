@@ -124,7 +124,7 @@ export function SearchInput({
             role="combobox"
           />
           <button
-            className="btn btn-square btn-primary"
+            className="btn btn-square btn-primary absolute -translate-x-full"
             aria-label="Search"
             type="button"
             onClick={() => onSearch && onSearch(query)}

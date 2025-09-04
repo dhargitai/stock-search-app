@@ -89,15 +89,13 @@ describe('Navbar', () => {
     it('opens login modal when Sign In button is clicked', () => {
       render(<Navbar />);
       
-      // Mock showModal method
-      const mockShowModal = vi.fn();
-      const mockModal = { showModal: mockShowModal };
-      vi.spyOn(document, 'getElementById').mockReturnValue(mockModal as any);
-      
       const signInButton = screen.getAllByText('Sign In')[0];
       fireEvent.click(signInButton);
       
-      expect(mockShowModal).toHaveBeenCalled();
+      // Check that the modal dialog becomes visible
+      const modal = screen.getByRole('dialog');
+      expect(modal).toBeInTheDocument();
+      expect(modal).toHaveAttribute('open');
     });
   });
 

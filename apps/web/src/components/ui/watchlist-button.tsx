@@ -1,8 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../hooks/useAuth'
 import { api } from '../../lib/trpc'
+import { LoginForm } from '../auth/LoginForm'
+import { saveRedirectUrl } from '../../lib/auth-redirect'
 
 interface WatchlistButtonProps {
   symbol: string
@@ -11,6 +14,7 @@ interface WatchlistButtonProps {
 export function WatchlistButton({ symbol }: WatchlistButtonProps) {
   const { isAuthenticated, loading: authLoading } = useAuth()
   const router = useRouter()
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
 
   const {
     data: isInWatchlist,
@@ -46,9 +50,16 @@ export function WatchlistButton({ symbol }: WatchlistButtonProps) {
     }
   })
 
+  const handleLoginModalClose = () => {
+    setIsLoginModalOpen(false)
+  }
+
   const handleClick = () => {
     if (!isAuthenticated) {
-      router.push('/login')
+      // Save current page URL for redirect after login
+      saveRedirectUrl(window.location.pathname)
+      // Open login modal instead of redirecting
+      setIsLoginModalOpen(true)
       return
     }
 
@@ -88,12 +99,15 @@ export function WatchlistButton({ symbol }: WatchlistButtonProps) {
   }
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={isLoading}
-      className={getButtonClasses()}
-    >
-      {getButtonText()}
-    </button>
+    <>
+      <button
+        onClick={handleClick}
+        disabled={isLoading}
+        className={getButtonClasses()}
+      >
+        {getButtonText()}
+      </button>
+      <LoginForm onClose={handleLoginModalClose} isOpen={isLoginModalOpen} />
+    </>
   )
 }

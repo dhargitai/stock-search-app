@@ -103,7 +103,7 @@ describe('WatchlistButton', () => {
       expect(button).toHaveClass('btn', 'btn-outline', 'btn-primary')
     })
 
-    it('should navigate to login page when guest user clicks button', () => {
+    it('should open login modal when guest user clicks button', () => {
       render(
         <TestWrapper>
           <WatchlistButton symbol={mockSymbol} />
@@ -113,7 +113,8 @@ describe('WatchlistButton', () => {
       const button = screen.getByRole('button', { name: /login to add to watchlist/i })
       fireEvent.click(button)
       
-      expect(mockRouter.push).toHaveBeenCalledWith('/login')
+      // Check that the login modal appears in the DOM
+      expect(screen.getByText('Sign In')).toBeInTheDocument()
     })
 
     it('should not call watchlist check query for guest users', () => {

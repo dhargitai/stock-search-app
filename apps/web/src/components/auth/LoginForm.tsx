@@ -1,21 +1,24 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import { redirectAfterAuth } from '../../lib/auth-redirect'
 
 interface LoginFormProps {
   onClose?: () => void
   redirectTo?: string
+  isOpen?: boolean
 }
 
-export function LoginForm({ onClose, redirectTo }: LoginFormProps) {
+export function LoginForm({ onClose, redirectTo, isOpen = false }: LoginFormProps) {
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [step, setStep] = useState<'email' | 'otp'>('email')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const router = useRouter()
   const supabase = createClient()
 
   const handleSendOtp = async (e: React.FormEvent) => {
@@ -60,9 +63,9 @@ export function LoginForm({ onClose, redirectTo }: LoginFormProps) {
       
       // Handle redirect after authentication
       if (redirectTo) {
-        window.location.href = redirectTo
+        router.push(redirectTo as any)
       } else {
-        redirectAfterAuth()
+        redirectAfterAuth(router)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid verification code')
@@ -78,7 +81,7 @@ export function LoginForm({ onClose, redirectTo }: LoginFormProps) {
   }
 
   return (
-    <dialog id="login_modal" className="modal">
+    <dialog id="login_modal" className="modal" open={isOpen}>
       <div className="modal-box">
         <form method="dialog">
           <button 
@@ -102,7 +105,7 @@ export function LoginForm({ onClose, redirectTo }: LoginFormProps) {
         {step === 'email' ? (
           <form onSubmit={handleSendOtp} className="space-y-4">
             <div className="form-control">
-              <label className="label" htmlFor="email">Email</label>
+              <label className="label mr-2" htmlFor="email">Email</label>
               <label className="input">
                 <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                   <g
@@ -144,7 +147,7 @@ export function LoginForm({ onClose, redirectTo }: LoginFormProps) {
             </div>
 
             <div className="form-control">
-              <label className="label" htmlFor="otp">Verification Code</label>
+              <label className="label mr-3" htmlFor="otp">Verification Code</label>
               <input
                 id="otp"
                 type="text"

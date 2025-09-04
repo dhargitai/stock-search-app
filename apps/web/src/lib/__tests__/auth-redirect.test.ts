@@ -37,12 +37,25 @@ Object.defineProperty(window, 'location', {
   writable: true,
 })
 
+// Mock Next.js router
+const mockRouter = {
+  push: vi.fn(),
+  refresh: vi.fn(),
+  replace: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn(),
+  prefetch: vi.fn(),
+}
+
 describe('auth-redirect utilities', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockHref = ''
     // Reset localStorage mocks
     mockLocalStorage.getItem.mockReturnValue(null)
+    // Reset router mocks
+    mockRouter.push.mockClear()
+    mockRouter.refresh.mockClear()
   })
 
   describe('saveRedirectUrl', () => {
@@ -90,34 +103,34 @@ describe('auth-redirect utilities', () => {
     it('redirects to saved URL and clears it', () => {
       mockLocalStorage.getItem.mockReturnValue('/watchlist')
       
-      redirectAfterAuth()
+      redirectAfterAuth(mockRouter as any)
       
       expect(mockLocalStorage.getItem).toHaveBeenCalledWith(REDIRECT_KEY)
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(REDIRECT_KEY)
-      expect(mockHref).toBe('/watchlist')
+      expect(mockRouter.push).toHaveBeenCalledWith('/watchlist')
     })
 
-    it('reloads page when no redirect URL is saved', () => {
+    it('refreshes page when no redirect URL is saved', () => {
       mockLocalStorage.getItem.mockReturnValue(null)
       
-      redirectAfterAuth()
+      redirectAfterAuth(mockRouter as any)
       
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(REDIRECT_KEY)
-      expect(mockReload).toHaveBeenCalled()
+      expect(mockRouter.refresh).toHaveBeenCalled()
     })
 
-    it('reloads page when redirect URL is home page', () => {
+    it('refreshes page when redirect URL is home page', () => {
       mockLocalStorage.getItem.mockReturnValue('/')
       
-      redirectAfterAuth()
+      redirectAfterAuth(mockRouter as any)
       
-      expect(mockReload).toHaveBeenCalled()
+      expect(mockRouter.refresh).toHaveBeenCalled()
     })
 
     it('clears redirect URL even when redirecting to home', () => {
       mockLocalStorage.getItem.mockReturnValue('/')
       
-      redirectAfterAuth()
+      redirectAfterAuth(mockRouter as any)
       
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(REDIRECT_KEY)
     })

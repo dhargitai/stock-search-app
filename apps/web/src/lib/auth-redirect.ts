@@ -2,6 +2,8 @@
  * Utility functions for handling authentication redirects
  */
 
+import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
+
 const REDIRECT_KEY = 'auth_redirect_to'
 
 export function saveRedirectUrl(url: string): void {
@@ -23,14 +25,14 @@ export function clearRedirectUrl(): void {
   }
 }
 
-export function redirectAfterAuth(): void {
+export function redirectAfterAuth(router: AppRouterInstance): void {
   const redirectUrl = getRedirectUrl()
   clearRedirectUrl()
   
   if (redirectUrl && redirectUrl !== '/') {
-    window.location.href = redirectUrl
+    router.push(redirectUrl)
   } else {
     // Default redirect or page refresh
-    window.location.reload()
+    router.refresh()
   }
 }

@@ -142,9 +142,9 @@ function PriceChart({
       return {
         grid: {
           top: 20,
-          right: 20,
+          right: 10,
           bottom: 60,
-          left: 60,
+          left: 35,
           containLabel: true
         },
         xAxis: {
@@ -360,33 +360,33 @@ function PriceChart({
   return (
     <div className="w-full">
       {/* Chart Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col gap-4 mb-6">
         <div>
-          <h3 className="text-xl font-semibold">Price Chart</h3>
-          <p className="text-base-content/70 text-sm">Historical price data for {symbol}</p>
+          <h3 className="text-lg sm:text-xl font-semibold">Price Chart</h3>
+          <p className="text-base-content/70 text-xs sm:text-sm break-words">Historical price data for {symbol}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex justify-center sm:justify-start">
           <div className="btn-group">
             <button 
-              className={`btn btn-sm ${period === '1D' ? 'btn-active' : ''}`}
+              className={`btn btn-xs sm:btn-sm ${period === '1D' ? 'btn-active' : ''}`}
               onClick={() => handlePeriodChange('1D')}
             >
               1D
             </button>
             <button 
-              className={`btn btn-sm ${period === '5D' ? 'btn-active' : ''}`}
+              className={`btn btn-xs sm:btn-sm ${period === '5D' ? 'btn-active' : ''}`}
               onClick={() => handlePeriodChange('5D')}
             >
               5D
             </button>
             <button 
-              className={`btn btn-sm ${period === '1M' ? 'btn-active' : ''}`}
+              className={`btn btn-xs sm:btn-sm ${period === '1M' ? 'btn-active' : ''}`}
               onClick={() => handlePeriodChange('1M')}
             >
               1M
             </button>
             <button 
-              className={`btn btn-sm ${period === '1Y' ? 'btn-active' : ''}`}
+              className={`btn btn-xs sm:btn-sm ${period === '1Y' ? 'btn-active' : ''}`}
               onClick={() => handlePeriodChange('1Y')}
             >
               1Y
@@ -396,26 +396,28 @@ function PriceChart({
       </div>
 
       {/* Chart Container */}
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body p-6">
-          <ReactECharts 
-            ref={chartRef}
-            option={chartOption}
-            style={{ height: '400px', width: '100%' }}
-            opts={{ renderer: 'canvas' }}
-            className="w-full"
-          />
+      <div className="card bg-base-100 border border-base-300 overflow-hidden">
+        <div className="card-body p-3 sm:p-6 overflow-hidden">
+          <div className="w-full overflow-hidden">
+            <ReactECharts 
+              ref={chartRef}
+              option={chartOption}
+              style={{ height: '300px', width: '100%', minWidth: 0 }}
+              opts={{ renderer: 'canvas' }}
+              className="w-full min-w-0"
+            />
+          </div>
 
           {/* Chart Info */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t border-base-300">
-            <div className="flex gap-2 flex-wrap items-center">
-              <div className="badge badge-success badge-sm">Live Data</div>
-              <div className="badge badge-outline badge-sm">Close Price</div>
+          <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-base-300">
+            <div className="flex gap-2 flex-wrap justify-center sm:justify-start items-center">
+              <div className="badge badge-success badge-xs sm:badge-sm">Live Data</div>
+              <div className="badge badge-outline badge-xs sm:badge-sm">Close Price</div>
               <span className="text-xs text-base-content/50">
                 {chartData.prices.length} data points
               </span>
             </div>
-            <div className="text-sm text-base-content/50">
+            <div className="text-xs sm:text-sm text-base-content/50 text-center sm:text-left break-words">
               Range: ${chartData.minPrice.toFixed(2)} - ${chartData.maxPrice.toFixed(2)}
             </div>
           </div>

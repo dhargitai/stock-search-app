@@ -7,6 +7,20 @@ vi.mock('../../../lib/auth-redirect', () => ({
   redirectAfterAuth: vi.fn()
 }))
 
+// Mock Next.js router
+const mockRouter = {
+  push: vi.fn(),
+  refresh: vi.fn(),
+  replace: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn(),
+  prefetch: vi.fn(),
+}
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => mockRouter,
+}))
+
 // Mock window.location
 const mockReload = vi.fn()
 const mockLocationAssign = vi.fn()
@@ -34,6 +48,9 @@ describe('LoginForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset router mocks
+    mockRouter.push.mockClear()
+    mockRouter.refresh.mockClear()
     // Reset all mocks to default successful responses
     mockSignInWithOtp.mockResolvedValue({ 
       data: { user: null, session: null },
@@ -276,7 +293,7 @@ describe('LoginForm', () => {
     fireEvent.click(screen.getByText('Verify Code'))
     
     await waitFor(() => {
-      expect(window.location.href).toBe('/custom-page')
+      expect(mockRouter.push).toHaveBeenCalledWith('/custom-page')
     })
   })
 })

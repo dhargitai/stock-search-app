@@ -45,39 +45,41 @@ export default async function StockDetailPage({ params, searchParams }: StockDet
   }
 
   return (
-    <div className="min-h-screen bg-base-100">
+    <div className="min-h-screen bg-base-100 overflow-x-hidden">
       <Navbar />
-      
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
+
+      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 overflow-x-hidden">
+        <div className="max-w-6xl mx-auto overflow-x-hidden">
           {/* Header Section */}
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="mb-6 sm:mb-8">
+            <div className="flex flex-col gap-4 mb-6">
               <div>
-                <h1 className="text-4xl lg:text-5xl font-bold text-base-content mb-2">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-base-content mb-2 break-words">
                   {stockData?.symbol || decodedSymbol.toUpperCase()}
                 </h1>
-                <p className="text-xl text-base-content/70">
+                <p className="text-base sm:text-lg lg:text-xl text-base-content/70 break-words">
                   {stockData?.companyName || `${decodedSymbol.toUpperCase()} Company`}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <WatchlistButton symbol={stockData?.symbol || decodedSymbol.toUpperCase()} />
-                <div className="badge badge-outline badge-lg">
-                  Last Updated: {stockData?.lastUpdated 
-                    ? new Date(stockData.lastUpdated).toLocaleTimeString()
-                    : 'N/A'
-                  }
+                <div className="badge badge-outline badge-sm sm:badge-md lg:badge-lg">
+                  <span className="text-xs sm:text-sm">
+                    Last Updated: {stockData?.lastUpdated
+                      ? new Date(stockData.lastUpdated).toLocaleTimeString()
+                      : 'N/A'
+                    }
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid gap-6 lg:gap-8">
+          <div className="grid gap-4 sm:gap-6 lg:gap-8 overflow-x-hidden">
             {/* Stock Quote Data Section */}
-            <div>
-              <StockQuoteCard 
+            <div className="w-full min-w-0 overflow-x-hidden">
+              <StockQuoteCard
                 data={stockData?.quote}
                 isLoading={isLoading}
                 error={error}
@@ -85,8 +87,8 @@ export default async function StockDetailPage({ params, searchParams }: StockDet
             </div>
 
             {/* Price Chart Container */}
-            <div>
-              <PriceChartWrapper 
+            <div className="w-full min-w-0 overflow-x-hidden">
+              <PriceChartWrapper
                 symbol={stockData?.symbol || decodedSymbol.toUpperCase()}
                 historicalData={stockData?.historicalData}
                 initialPeriod={period as ChartPeriod}

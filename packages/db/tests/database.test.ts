@@ -251,7 +251,14 @@ describe('Database Integration Tests', () => {
   });
 
   describe('Database Trigger', () => {
-    const testAuthUserId = 'd3eebc99-9c0b-4ef8-bb6d-6bb9bd380a04';
+    let testAuthUserId: string;
+    let testEmail: string;
+
+    beforeEach(async () => {
+      // Generate unique identifiers for this test run
+      testAuthUserId = crypto.randomUUID();
+      testEmail = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
+    });
 
     afterEach(async () => {
       try {
@@ -281,7 +288,7 @@ describe('Database Integration Tests', () => {
           gen_random_uuid(),
           'authenticated',
           'authenticated', 
-          'trigger-integration@example.com',
+          ${testEmail},
           crypt('testpassword', gen_salt('bf')),
           now(),
           '{"name": "Trigger Integration User"}'::jsonb,
@@ -298,7 +305,7 @@ describe('Database Integration Tests', () => {
       });
 
       expect(user).not.toBeNull();
-      expect(user!.email).toBe('trigger-integration@example.com');
+      expect(user!.email).toBe(testEmail);
       expect(user!.name).toBe('Trigger Integration User');
     });
   });

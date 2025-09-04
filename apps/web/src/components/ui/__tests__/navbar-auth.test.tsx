@@ -21,11 +21,12 @@ vi.mock('../../../lib/auth-redirect', () => ({
 
 // Mock LoginForm component
 vi.mock('../../auth/LoginForm', () => ({
-  LoginForm: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="login-form">
-      <button onClick={onClose}>Close Modal</button>
-    </div>
-  )
+  LoginForm: ({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean }) => 
+    isOpen ? (
+      <div data-testid="login-form">
+        <button onClick={onClose}>Close Modal</button>
+      </div>
+    ) : null
 }))
 
 // Mock dialog methods
@@ -93,7 +94,8 @@ describe('Navbar Authentication Integration', () => {
       const signInButtons = screen.getAllByText('Sign In')
       fireEvent.click(signInButtons[0])
       
-      expect(mockShowModal).toHaveBeenCalled()
+      // Check that the LoginForm modal appears
+      expect(screen.getByTestId('login-form')).toBeInTheDocument()
     })
 
     it('saves redirect URL and opens login modal when Watchlist is clicked', () => {
@@ -105,7 +107,8 @@ describe('Navbar Authentication Integration', () => {
       fireEvent.click(watchlistButtons[0])
       
       expect(mockSaveRedirectUrl).toHaveBeenCalledWith('/watchlist')
-      expect(mockShowModal).toHaveBeenCalled()
+      // Check that the LoginForm modal appears
+      expect(screen.getByTestId('login-form')).toBeInTheDocument()
     })
   })
 
@@ -168,11 +171,19 @@ describe('Navbar Authentication Integration', () => {
         render(<Navbar />)
       })
       
-      // Find the close button in the mocked LoginForm
+      // First open the modal
+      const signInButton = screen.getAllByText('Sign In')[0]
+      fireEvent.click(signInButton)
+      
+      // Verify modal is open
+      expect(screen.getByTestId('login-form')).toBeInTheDocument()
+      
+      // Find the close button in the mocked LoginForm and click it
       const closeButton = screen.getByText('Close Modal')
       fireEvent.click(closeButton)
       
-      expect(mockClose).toHaveBeenCalled()
+      // Verify modal is closed (mocked LoginForm should disappear)
+      expect(screen.queryByTestId('login-form')).not.toBeInTheDocument()
     })
   })
 

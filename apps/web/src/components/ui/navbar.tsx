@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LoginForm } from '../auth/LoginForm';
@@ -11,12 +12,12 @@ interface NavbarProps {
 }
 
 export function Navbar({ className = '' }: NavbarProps): JSX.Element {
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
 
   const handleLoginClick = () => {
-    const modal = document.getElementById('login_modal') as HTMLDialogElement;
-    modal?.showModal();
+    setIsLoginModalOpen(true);
   };
 
   const handleWatchlistClick = (e: React.MouseEvent) => {
@@ -30,8 +31,7 @@ export function Navbar({ className = '' }: NavbarProps): JSX.Element {
   };
 
   const handleCloseModal = () => {
-    const modal = document.getElementById('login_modal') as HTMLDialogElement;
-    modal?.close();
+    setIsLoginModalOpen(false);
   };
 
   const handleSignOut = () => {
@@ -136,7 +136,7 @@ export function Navbar({ className = '' }: NavbarProps): JSX.Element {
           </ul>
         </div>
       </div>
-      <LoginForm onClose={handleCloseModal} />
+      <LoginForm onClose={handleCloseModal} isOpen={isLoginModalOpen} />
     </>
   );
 }
