@@ -1,0 +1,54 @@
+schema: 1
+story: "3.1"
+story_title: "Implement Add/Remove from Watchlist UI"
+gate: PASS
+status_reason: "Implementation is complete, comprehensive, and well-tested with no blocking issues identified."
+reviewer: "David Hargitai (dev)"
+updated: "2025-09-04T12:29:30Z"
+
+# Always present but only active when WAIVED
+waiver: { active: false }
+
+# Issues (if any) - Use fixed severity: low | medium | high
+top_issues: []
+
+# Risk summary (from risk-profile task if run)
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+# Quality scoring and expiry
+quality_score: 95
+expires: "2025-09-18T12:29:30Z"
+
+# Evidence from review
+evidence:
+  tests_reviewed: 16
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]  # All ACs have comprehensive test coverage
+    ac_gaps: []  # No coverage gaps
+
+# NFR validation
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Proper authentication checks, RLS policies in place, protectedProcedure usage"
+  performance:
+    status: PASS
+    notes: "Efficient database queries with composite keys, proper caching with staleTime: 0"
+  reliability:
+    status: PASS
+    notes: "Comprehensive error handling, optimistic updates with rollback capability"
+  maintainability:
+    status: PASS
+    notes: "Clear separation of concerns, well-structured components, comprehensive tests"
+
+# No immediate or future recommendations - implementation is solid
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider implementing toast notifications for better user feedback"
+      refs: ["apps/web/src/components/ui/watchlist-button.tsx:34", "apps/web/src/components/ui/watchlist-button.tsx:44"]

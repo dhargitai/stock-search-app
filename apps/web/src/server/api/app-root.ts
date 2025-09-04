@@ -12,10 +12,12 @@ export const createTRPCContext = (opts: { req: Request }) => {
 // Import existing routers and re-export with App Router compatibility
 import { stockRouter } from './routers/stock';
 import { userRouter } from './routers/user';
+import { watchlistRouter } from './routers/watchlist';
 
 export const appRouter = createTRPCRouter({
   stock: stockRouter,
   user: userRouter,
+  watchlist: watchlistRouter,
 });
 
 export type AppRouter = typeof appRouter;

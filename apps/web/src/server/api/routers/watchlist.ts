@@ -74,6 +74,35 @@ export const watchlistRouter = createTRPCRouter({
     }),
 
   /**
+   * Check if a stock symbol exists in the user's watchlist
+   */
+  check: protectedProcedure
+    .input(
+      z.object({
+        symbol: z.string().min(1).max(10).transform(val => val.toUpperCase()),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const existingItem = await ctx.db.watchlistItem.findUnique({
+          where: {
+            userId_symbol: {
+              userId: ctx.userId,
+              symbol: input.symbol,
+            },
+          },
+        });
+
+        return !!existingItem;
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to check watchlist status',
+        });
+      }
+    }),
+
+  /**
    * Remove a stock symbol from the user's watchlist
    */
   remove: protectedProcedure

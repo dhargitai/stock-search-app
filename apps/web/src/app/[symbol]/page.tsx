@@ -1,6 +1,7 @@
 import { Navbar } from '@/components/ui/navbar';
 import { StockQuoteCard } from '@/components/ui/stock-quote-card';
 import { PriceChartWrapper } from '@/components/ui/price-chart-wrapper';
+import { WatchlistButton } from '@/components/ui/watchlist-button';
 import { serverApi } from '@/lib/trpc-server';
 import { TRPCError } from '@trpc/server';
 import type { StockDetailsData } from '@/lib/types/stock';
@@ -60,11 +61,14 @@ export default async function StockDetailPage({ params, searchParams }: StockDet
                   {stockData?.companyName || `${decodedSymbol.toUpperCase()} Company`}
                 </p>
               </div>
-              <div className="badge badge-outline badge-lg">
-                Last Updated: {stockData?.lastUpdated 
-                  ? new Date(stockData.lastUpdated).toLocaleTimeString()
-                  : 'N/A'
-                }
+              <div className="flex items-center gap-4">
+                <WatchlistButton symbol={stockData?.symbol || decodedSymbol.toUpperCase()} />
+                <div className="badge badge-outline badge-lg">
+                  Last Updated: {stockData?.lastUpdated 
+                    ? new Date(stockData.lastUpdated).toLocaleTimeString()
+                    : 'N/A'
+                  }
+                </div>
               </div>
             </div>
           </div>

@@ -66,3 +66,44 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// Mock console.error to suppress jsdom requestSubmit warnings
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  // Suppress the specific jsdom requestSubmit error
+  if (typeof args[0] === 'string' && args[0].includes('requestSubmit')) {
+    return;
+  }
+  originalConsoleError.apply(console, args);
+};
+
+// Comprehensive jsdom requestSubmit polyfill
+if (typeof window !== 'undefined' && typeof HTMLFormElement !== 'undefined') {
+  // Override the internal implementation
+  const originalRequestSubmit = HTMLFormElement.prototype.requestSubmit;
+  HTMLFormElement.prototype.requestSubmit = function(submitter?: HTMLElement) {
+    try {
+      if (originalRequestSubmit) {
+        return originalRequestSubmit.call(this, submitter);
+      }
+    } catch (error) {
+      // Fallback for jsdom compatibility
+      if (error instanceof Error && error.message.includes('Not implemented')) {
+        const event = new Event('submit', {
+          bubbles: true,
+          cancelable: true
+        });
+        this.dispatchEvent(event);
+        return;
+      }
+      throw error;
+    }
+    
+    // Standard polyfill
+    const event = new Event('submit', {
+      bubbles: true,
+      cancelable: true
+    });
+    this.dispatchEvent(event);
+  };
+}
