@@ -10,7 +10,8 @@
     "start": "next start",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "postinstall": "cd ../../packages/db && pnpm db:generate"
   },
   "dependencies": {
     "@peak-finance/db": "workspace:*",
@@ -33,6 +34,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@prisma/nextjs-monorepo-workaround-plugin": "^6.15.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",

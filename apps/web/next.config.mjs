@@ -1,3 +1,5 @@
+import { PrismaPlugin } from '@prisma/nextjs-monorepo-workaround-plugin';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -8,6 +10,13 @@ const nextConfig = {
   },
   typescript: {
     ignoreBuildErrors: false,
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.plugins = [...config.plugins, new PrismaPlugin()];
+    }
+
+    return config;
   },
   env: {
     ALPHA_VANTAGE_API_KEY: process.env.ALPHA_VANTAGE_API_KEY,
