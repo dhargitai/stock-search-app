@@ -1,20 +1,26 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import React from 'react';
 import { PriceChartContainer } from '../price-chart-container';
 import type { ChartDataPoint } from '@/lib/types/stock';
 
 // Mock echarts-for-react
 vi.mock('echarts-for-react', () => ({
-  default: vi.fn(({ option, style, className }) => (
-    <div 
-      data-testid="echarts-mock"
-      data-option={JSON.stringify(option)}
-      style={style}
-      className={className}
-    >
-      Mocked ECharts Component
-    </div>
-  ))
+  default: React.forwardRef<any, { option?: any; style?: any; className?: string }>(
+    function MockedECharts({ option, style, className }, ref) {
+      return (
+        <div 
+          ref={ref}
+          data-testid="echarts-mock"
+          data-option={JSON.stringify(option)}
+          style={style}
+          className={className}
+        >
+          Mocked ECharts Component
+        </div>
+      );
+    }
+  )
 }));
 
 // Mock data for testing

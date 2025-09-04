@@ -3,7 +3,7 @@ import { createTRPCRouter, publicProcedure } from '../trpc';
 
 export const userRouter = createTRPCRouter({
   getProfile: publicProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       const { id } = input;
 
@@ -12,8 +12,7 @@ export const userRouter = createTRPCRouter({
       const user = await ctx.db.user.findUnique({
         where: { id },
         include: {
-          portfolios: true,
-          watchlists: true,
+          watchlistItems: true,
         },
       });
 
@@ -26,14 +25,16 @@ export const userRouter = createTRPCRouter({
 
   create: publicProcedure
     .input(z.object({
+      id: z.string().uuid(),
       email: z.string().email(),
       name: z.string().min(1).max(100),
     }))
     .mutation(async ({ input, ctx }) => {
-      const { email, name } = input;
+      const { id, email, name } = input;
 
       const user = await ctx.db.user.create({
         data: {
+          id,
           email,
           name,
         },
