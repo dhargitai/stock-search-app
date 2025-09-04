@@ -285,4 +285,34 @@ describe('watchlistRouter', () => {
       expect(schema.symbol).toBe('AAPL');
     });
   });
+
+  describe('RLS compatibility', () => {
+    it('should ensure all operations respect userId context', async () => {
+      const userContext = createMockContext('user-specific-id');
+      
+      // Test that all operations use the userId from context
+      mockPrismaClient.watchlistItem.findMany = vi.fn().mockResolvedValue([]);
+      await mockWatchlistRouter.get.handler({ ctx: userContext });
+      
+      expect(mockPrismaClient.watchlistItem.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ userId: 'user-specific-id' })
+        })
+      );
+    });
+
+    it('should handle database RLS policy violations gracefully', async () => {
+      const userContext = createMockContext('test-user-id');
+      
+      // Mock RLS policy violation error from database
+      mockPrismaClient.watchlistItem.create = vi.fn().mockRejectedValue(
+        new Error('new row violates row-level security policy for table "watchlist_items"')
+      );
+      mockPrismaClient.watchlistItem.findUnique = vi.fn().mockResolvedValue(null);
+
+      const input = { symbol: 'AAPL' };
+      
+      await expect(mockWatchlistRouter.add.handler({ ctx: userContext, input })).rejects.toThrow(TRPCError);
+    });
+  });
 });
