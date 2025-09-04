@@ -383,4 +383,5 @@ describe('WatchlistItem', () => {
       )
     })
   })
+
 })
